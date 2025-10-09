@@ -1,0 +1,15 @@
+using PhoneBook.Application.DTOs;
+
+namespace PhoneBook.Application.Services
+{
+    public interface IContactService
+    {
+        Task<IEnumerable<ContactDto>> GetAllContactsAsync();
+        Task<ContactDto?> GetContactByIdAsync(int id);
+        Task<ContactImageDto?> GetContactImageAsync(int contactId);
+        Task<IEnumerable<ContactDto>> SearchContactsAsync(ContactSearchDto searchDto);
+        Task<int> CreateContactAsync(CreateContactDto dto);
+        Task UpdateContactAsync(UpdateContactDto dto);
+        Task DeleteContactAsync(int id);
+    }
+}
