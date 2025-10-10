@@ -1,0 +1,68 @@
+@model PhoneBook.Application.DTOs.CreateContactDto
+@{
+    ViewData["Title"] = "مخاطب جدید";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-plus-fill"></i> مخاطب جدید</h2>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="bi bi-arrow-right"></i> بازگشت به لیست
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label">نام *</label>
+                <input asp-for="FullName" class="form-control" placeholder="نام کامل" />
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MobileNumber" class="form-label">شماره موبایل *</label>
+                <input asp-for="MobileNumber" class="form-control" placeholder="09123456789" 
+                       maxlength="11" dir="ltr" />
+                <span asp-validation-for="MobileNumber" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="BirthDate" class="form-label">تاریخ تولد (میلادی)</label>
+                <input asp-for="BirthDate" type="date" class="form-control" />
+                <span asp-validation-for="BirthDate" class="text-danger"></span>
+                <small class="form-text text-muted">برای نمایش صحیح، تاریخ را به صورت میلادی وارد کنید</small>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Image" class="form-label">تصویر</label>
+                <input asp-for="Image" type="file" class="form-control" accept="image/*" />
+                <span asp-validation-for="Image" class="text-danger"></span>
+                <small class="form-text text-muted">فرمت‌های مجاز: JPG, PNG, GIF (حداکثر 5MB)</small>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> ذخیره
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> انصراف
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}circle"></i> انصراف
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

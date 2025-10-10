@@ -1,0 +1,623 @@
+# 📱 PhoneBook - دفترچه تلفن
+
+پروژه دفترچه تلفن با معماری Clean Architecture و ASP.NET Core 8
+
+## 📋 فهرست مطالب
+- [ویژگی‌ها](#ویژگیها)
+- [معماری](#معماری)
+- [تکنولوژی‌ها](#تکنولوژیها)
+- [پیش‌نیازها](#پیشنیازها)
+- [نصب و راه‌اندازی](#نصب-و-راهاندازی)
+- [ساختار پروژه](#ساختار-پروژه)
+- [تست](#تست)
+- [مستندات](#مستندات)
+
+---
+
+## ✨ ویژگی‌ها
+
+### عملکردها
+- ✅ افزودن مخاطب جدید با اطلاعات کامل
+- ✅ ویرایش اطلاعات مخاطبین موجود
+- ✅ حذف مخاطب با تاییدیه
+- ✅ جستجوی همزمان در نام و شماره موبایل
+- ✅ جستجوی بازه‌ای تاریخ تولد
+- ✅ آپلود و مدیریت تصاویر مخاطبین
+- ✅ نمایش تاریخ به شمسی (ذخیره میلادی)
+- ✅ Validation کامل شماره موبایل (11 رقمی، شروع با 09)
+- ✅ جلوگیری از ذخیره شماره موبایل تکراری
+
+### ویژگی‌های فنی
+- ✅ معماری Clean Architecture
+- ✅ Repository و Unit of Work Pattern
+- ✅ Dependency Injection
+- ✅ Exception Handling مرکزی
+- ✅ Logging با Serilog
+- ✅ Async/Await در همه عملیات
+- ✅ Transaction Management
+- ✅ Input Validation با FluentValidation
+- ✅ امنیت (Anti-CSRF, SQL Injection Prevention)
+- ✅ پشتیبانی کامل از زبان فارسی (RTL)
+
+---
+
+## 🏗️ معماری
+
+پروژه بر اساس **Clean Architecture** طراحی شده است:
+
+```
+┌─────────────────────────────────────┐
+│      Presentation Layer (Web)       │
+│  Controllers, Views, Middleware     │
+└────────────┬────────────────────────┘
+             │
+┌────────────▼────────────────────────┐
+│     Application Layer               │
+│  Services, DTOs, Validators         │
+└────────────┬────────────────────────┘
+             │
+┌────────────▼────────────────────────┐
+│     Infrastructure Layer            │
+│  EF Core, Repositories, UnitOfWork  │
+└────────────┬────────────────────────┘
+             │
+┌────────────▼────────────────────────┐
+│       Domain Layer                  │
+│  Entities, Interfaces               │
+└─────────────────────────────────────┘
+```
+
+### مزایای این معماری:
+- **جداسازی نگرانی‌ها**: هر لایه مسئولیت مشخصی دارد
+- **تست‌پذیری**: لایه‌ها به صورت مستقل قابل تست هستند
+- **قابلیت نگهداری**: تغییرات به راحتی اعمال می‌شوند
+- **انعطاف‌پذیری**: می‌توان Framework یا Database را تغییر داد
+
+---
+
+## 🛠️ تکنولوژی‌ها
+
+### Backend
+- **ASP.NET Core 8.0** - Web Framework
+- **Entity Framework Core 8.0** - ORM
+- **SQL Server** - Database
+- **FluentValidation 11.9** - Input Validation
+- **Serilog 8.0** - Logging
+- **MD.PersianDateTime** - تاریخ شمسی
+
+### Frontend
+- **Razor Pages** - Template Engine
+- **Bootstrap 5.3 RTL** - UI Framework
+- **Bootstrap Icons** - آیکون‌ها
+- **JavaScript (Vanilla)** - Client-side Logic
+
+### Design Patterns
+- Repository Pattern
+- Unit of Work Pattern
+- DTO Pattern
+- Dependency Injection
+- Middleware Pattern
+
+---
+
+## 📦 پیش‌نیازها
+
+### نرم‌افزارهای مورد نیاز:
+1. **Visual Studio 2022** (Community Edition یا بالاتر)
+   - Workload: ASP.NET and web development
+   
+2. **SQL Server 2019** یا بالاتر
+   - SQL Server Express کافی است
+   - یا SQL Server LocalDB
+   
+3. **.NET 8.0 SDK**
+   ```bash
+   dotnet --version
+   # باید 8.0.x نمایش دهد
+   ```
+
+### اختیاری:
+- **SQL Server Management Studio (SSMS)** - برای مدیریت دیتابیس
+- **Git** - برای مدیریت نسخه
+
+---
+
+## 🚀 نصب و راه‌اندازی
+
+### مرحله 1: Clone یا دانلود پروژه
+```bash
+git clone https://github.com/your-repo/phonebook.git
+cd phonebook
+```
+
+### مرحله 2: باز کردن Solution
+1. فایل `PhoneBook.sln` را در Visual Studio باز کنید
+2. صبر کنید تا NuGet Package ها بازیابی شوند
+
+### مرحله 3: تنظیم Connection String
+در فایل `PhoneBook.Web/appsettings.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=.;Database=PhoneBookDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+  }
+}
+```
+
+**نکته**: اگر SQL Server روی ماشین دیگری است، `Server=.` را تغییر دهید:
+- `Server=localhost` یا `Server=(localdb)\MSSQLLocalDB`
+- `Server=YOUR_SERVER_NAME`
+
+### مرحله 4: ایجاد دیتابیس
+
+#### روش A: با Package Manager Console
+```powershell
+# در Package Manager Console:
+PM> cd PhoneBook.Web
+PM> Add-Migration InitialCreate
+PM> Update-Database
+```
+
+#### روش B: با dotnet CLI
+```bash
+# از پوشه Solution:
+dotnet ef migrations add InitialCreate --project PhoneBook.Infrastructure --startup-project PhoneBook.Web
+
+dotnet ef database update --project PhoneBook.Infrastructure --startup-project PhoneBook.Web
+```
+
+### مرحله 5: اجرای برنامه
+1. Set `PhoneBook.Web` as Startup Project (راست کلیک > Set as Startup Project)
+2. فشار دادن `F5` یا `Ctrl+F5`
+3. مرورگر باز می‌شود و برنامه اجرا می‌شود
+
+**URL پیش‌فرض**: `https://localhost:7001` یا `http://localhost:5001`
+
+---
+
+## 📁 ساختار پروژه
+
+```
+PhoneBook.Solution/
+│
+├── PhoneBook.Domain/                    # Domain Layer
+│   ├── Entities/
+│   │   ├── BaseEntity.cs               # کلاس پایه
+│   │   ├── Contact.cs                  # مخاطب
+│   │   └── ContactImage.cs             # تصویر مخاطب
+│   └── Interfaces/
+│       ├── IRepository.cs              # Repository پایه
+│       ├── IContactRepository.cs       # Repository مخاطب
+│       ├── IContactImageRepository.cs  # Repository تصویر
+│       └── IUnitOfWork.cs              # Unit of Work
+│
+├── PhoneBook.Application/               # Application Layer
+│   ├── DTOs/
+│   │   └── ContactDto.cs               # DTOها
+│   ├── Validators/
+│   │   ├── CreateContactValidator.cs   # Validator ایجاد
+│   │   └── UpdateContactValidator.cs   # Validator ویرایش
+│   ├── Services/
+│   │   ├── IContactService.cs          # Interface سرویس
+│   │   └── ContactService.cs           # پیاده‌سازی سرویس
+│   └── Exceptions/
+│       └── BusinessException.cs        # Exception های سفارشی
+│
+├── PhoneBook.Infrastructure/            # Infrastructure Layer
+│   ├── Data/
+│   │   └── ApplicationDbContext.cs     # DbContext
+│   ├── Repositories/
+│   │   ├── Repository.cs               # پیاده‌سازی Repository پایه
+│   │   ├── ContactRepository.cs        # پیاده‌سازی Repository مخاطب
+│   │   └── ContactImageRepository.cs   # پیاده‌سازی Repository تصویر
+│   ├── UnitOfWork/
+│   │   └── UnitOfWork.cs               # پیاده‌سازی Unit of Work
+│   └── Migrations/
+│       └── [Migration Files]           # فایل‌های Migration
+│
+└── PhoneBook.Web/                       # Presentation Layer
+    ├── Controllers/
+    │   └── ContactsController.cs       # Controller مخاطبین
+    ├── Views/
+    │   ├── Shared/
+    │   │   └── _Layout.cshtml          # Layout اصلی
+    │   └── Contacts/
+    │       ├── Index.cshtml            # لیست مخاطبین
+    │       ├── Details.cshtml          # جزئیات مخاطب
+    │       ├── Create.cshtml           # ایجاد مخاطب
+    │       └── Edit.cshtml             # ویرایش مخاطب
+    ├── Middleware/
+    │   └── ExceptionHandlingMiddleware.cs  # Middleware خطاها
+    ├── wwwroot/                        # فایل‌های Static
+    ├── Program.cs                      # Entry Point
+    ├── appsettings.json                # تنظیمات
+    └── logs/                           # فولدر لاگ‌ها (خودکار ایجاد می‌شود)
+```
+
+---
+
+## 🗄️ ساختار دیتابیس
+
+### جدول Contacts
+| Column | Type | Constraints |
+|--------|------|-------------|
+| Id | int | PK, Identity |
+| FullName | nvarchar(100) | NOT NULL |
+| MobileNumber | nvarchar(11) | NOT NULL, UNIQUE |
+| BirthDate | datetime2 | NULL |
+| CreatedAt | datetime2 | NOT NULL |
+| UpdatedAt | datetime2 | NULL |
+
+### جدول ContactImages
+| Column | Type | Constraints |
+|--------|------|-------------|
+| Id | int | PK, Identity |
+| ContactId | int | FK (Contacts.Id), UNIQUE |
+| ImageData | varbinary(MAX) | NOT NULL |
+| FileName | nvarchar(100) | NOT NULL |
+| ContentType | nvarchar(50) | NOT NULL |
+| FileSize | bigint | NOT NULL |
+| CreatedAt | datetime2 | NOT NULL |
+| UpdatedAt | datetime2 | NULL |
+
+**روابط:**
+- یک مخاطب می‌تواند یک تصویر داشته باشد (One-to-One)
+- Cascade Delete: حذف مخاطب، تصویر را هم حذف می‌کند
+
+---
+
+## 🧪 تست
+
+### تست دستی
+
+#### 1. ایجاد مخاطب جدید
+- نام: علی احمدی
+- موبایل: 09123456789
+- تاریخ تولد: 1990-01-01
+- تصویر: یک عکس JPG
+
+**انتظار:**
+- مخاطب با موفقیت ایجاد شود
+- پیام موفقیت نمایش داده شود
+- در لیست ظاهر شود
+
+#### 2. تست Validation
+- شماره تکراری: `09123456789`
+- شماره نامعتبر: `123456`
+- شماره 10 رقمی: `0912345678`
+- فایل غیر تصویری: `document.pdf`
+- تصویر بزرگ: فایل بیشتر از 5MB
+
+**انتظار:**
+- پیام خطای مناسب فارسی نمایش داده شود
+
+#### 3. جستجو
+- جستجوی نام: "علی"
+- جستجوی شماره: "0912"
+- جستجوی تاریخ تولد: از 1370 تا 1380
+
+**انتظار:**
+- فقط مخاطبین مطابق فیلتر نمایش داده شوند
+
+#### 4. حذف
+- کلیک روی دکمه حذف
+- تایید حذف
+
+**انتظار:**
+- پیام تایید نمایش داده شود
+- پس از تایید، مخاطب حذف شود
+
+### Unit Testing (پیشنهادی)
+
+```csharp
+// نمونه تست
+[Fact]
+public async Task CreateContact_DuplicateMobileNumber_ThrowsException()
+{
+    // Arrange
+    var mockUnitOfWork = new Mock<IUnitOfWork>();
+    mockUnitOfWork
+        .Setup(x => x.Contacts.IsMobileNumberExistsAsync("09123456789", null))
+        .ReturnsAsync(true);
+    
+    var service = new ContactService(mockUnitOfWork.Object, logger);
+    var dto = new CreateContactDto 
+    { 
+        MobileNumber = "09123456789" 
+    };
+
+    // Act & Assert
+    await Assert.ThrowsAsync<BusinessException>(
+        () => service.CreateContactAsync(dto)
+    );
+}
+```
+
+---
+
+## 📸 اسکرین‌شات‌ها
+
+### صفحه لیست مخاطبین
+![لیست مخاطبین](screenshots/list.png)
+- نمایش تمام مخاطبین با تصویر
+- جستجوی پیشرفته
+- دکمه‌های عملیات
+
+### صفحه ایجاد مخاطب
+![ایجاد مخاطب](screenshots/create.png)
+- فرم با Validation
+- آپلود تصویر
+- پشتیبانی RTL
+
+### صفحه جزئیات
+![جزئیات مخاطب](screenshots/details.png)
+- نمایش کامل اطلاعات
+- تصویر بزرگ
+- تاریخ شمسی
+
+---
+
+## 🔧 عیب‌یابی (Troubleshooting)
+
+### خطا: Cannot connect to SQL Server
+**راه حل:**
+1. بررسی کنید SQL Server در حال اجرا باشد
+2. Connection String را بررسی کنید
+3. SQL Server Authentication را فعال کنید (اگر نیاز است)
+
+```bash
+# تست اتصال:
+sqlcmd -S . -E
+```
+
+### خطا: Migration pending
+**راه حل:**
+```bash
+dotnet ef database update --project PhoneBook.Infrastructure --startup-project PhoneBook.Web
+```
+
+### خطا: NuGet Package restore failed
+**راه حل:**
+1. Tools > Options > NuGet Package Manager > Clear All NuGet Cache(s)
+2. راست کلیک روی Solution > Restore NuGet Packages
+
+### خطا: Port already in use
+**راه حل:**
+در `PhoneBook.Web/Properties/launchSettings.json` پورت را تغییر دهید:
+```json
+{
+  "applicationUrl": "https://localhost:7002;http://localhost:5002"
+}
+```
+
+### لاگ‌ها را بررسی کنید
+فایل‌های لاگ در `PhoneBook.Web/logs/` ذخیره می‌شوند:
+```
+logs/phonebook-20240101.txt
+```
+
+---
+
+## 📚 مستندات API (در صورت نیاز)
+
+### Endpoints
+
+#### GET /Contacts
+لیست تمام مخاطبین
+
+#### GET /Contacts/Details/{id}
+جزئیات یک مخاطب
+
+#### GET /Contacts/Create
+نمایش فرم ایجاد
+
+#### POST /Contacts/Create
+ایجاد مخاطب جدید
+
+**Body (Form Data):**
+```
+FullName: string (required, max 100)
+MobileNumber: string (required, length 11, pattern: ^09\d{9}$)
+BirthDate: datetime (optional)
+Image: IFormFile (optional, max 5MB, formats: jpg,jpeg,png,gif)
+```
+
+#### GET /Contacts/Edit/{id}
+نمایش فرم ویرایش
+
+#### POST /Contacts/Edit/{id}
+ویرایش مخاطب
+
+**Body (Form Data):**
+```
+Id: int (required)
+FullName: string (required, max 100)
+MobileNumber: string (required, length 11)
+BirthDate: datetime (optional)
+Image: IFormFile (optional)
+RemoveImage: bool (default: false)
+```
+
+#### POST /Contacts/Delete/{id}
+حذف مخاطب
+
+#### GET /Contacts/GetImage/{id}
+دریافت تصویر مخاطب
+
+**Response:** Binary image data
+
+---
+
+## 🔒 امنیت
+
+### تدابیر امنیتی پیاده‌سازی شده:
+
+1. **Anti-CSRF Token**
+   - تمام فرم‌ها شامل AntiForgeryToken
+   - جلوگیری از حملات Cross-Site Request Forgery
+
+2. **SQL Injection Prevention**
+   - استفاده از EF Core Parameterized Queries
+   - عدم استفاده از Raw SQL
+
+3. **Input Validation**
+   - Validation سمت Server با FluentValidation
+   - Validation سمت Client با HTML5
+   - Database Constraints
+
+4. **File Upload Security**
+   - محدودیت نوع فایل (فقط تصاویر)
+   - محدودیت حجم (5MB)
+   - Validation Content-Type
+
+5. **HTTPS**
+   - استفاده از HTTPS در Production
+   - HSTS Headers
+
+---
+
+## 🚀 Deployment (استقرار)
+
+### آماده‌سازی برای Production
+
+#### 1. تغییر Connection String
+در `appsettings.Production.json`:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=PRODUCTION_SERVER;Database=PhoneBookDb;User Id=username;Password=password;TrustServerCertificate=True"
+  }
+}
+```
+
+#### 2. Build برای Release
+```bash
+dotnet publish PhoneBook.Web -c Release -o ./publish
+```
+
+#### 3. ایجاد دیتابیس در Production
+```bash
+dotnet ef database update --project PhoneBook.Infrastructure --startup-project PhoneBook.Web --configuration Release
+```
+
+#### 4. بکاپ دیتابیس
+```sql
+BACKUP DATABASE PhoneBookDb
+TO DISK = 'C:\Backups\PhoneBookDb.bak'
+WITH FORMAT, MEDIANAME = 'PhoneBookBackup';
+```
+
+### استقرار روی IIS
+
+1. نصب ASP.NET Core Hosting Bundle
+2. ایجاد Application Pool جدید (.NET CLR Version: No Managed Code)
+3. Copy کردن فایل‌های publish به wwwroot
+4. تنظیم Permissions برای IIS_IUSRS
+5. تنظیم Connection String در web.config
+
+---
+
+## 📊 Performance Tips
+
+### بهینه‌سازی‌های انجام شده:
+
+1. **جدول جداگانه برای تصاویر**
+   - کاهش حجم Query های لیست
+   - بهبود سرعت Index ها
+
+2. **Async/Await**
+   - Non-blocking I/O
+   - Scalability بهتر
+
+3. **Index روی MobileNumber**
+   - جستجوی سریع
+   - Uniqueness Constraint
+
+4. **Eager Loading**
+   - جلوگیری از N+1 Problem
+   - کاهش تعداد Query ها
+
+5. **DTO Pattern**
+   - انتقال فقط داده‌های مورد نیاز
+   - کاهش حجم داده
+
+### پیشنهادات آینده:
+
+- **Caching**: استفاده از Memory Cache یا Redis
+- **CDN**: برای Static Files
+- **Image Optimization**: فشرده‌سازی تصاویر قبل از ذخیره
+- **Pagination**: برای لیست‌های بزرگ
+- **Background Jobs**: برای عملیات سنگین
+
+---
+
+## 🤝 مشارکت
+
+برای مشارکت در پروژه:
+
+1. Fork کنید
+2. Branch جدید بسازید (`git checkout -b feature/AmazingFeature`)
+3. Commit کنید (`git commit -m 'Add some AmazingFeature'`)
+4. Push کنید (`git push origin feature/AmazingFeature`)
+5. Pull Request باز کنید
+
+### کدنویسی استاندارد:
+- از SOLID Principles پیروی کنید
+- Clean Code بنویسید
+- Unit Test اضافه کنید
+- مستندات به‌روز کنید
+
+---
+
+## 📝 License
+
+این پروژه تحت لایسنس MIT است.
+
+---
+
+## 👨‍💻 سازنده
+
+**نام شما**
+- Email: your.email@example.com
+- GitHub: [@yourusername](https://github.com/yourusername)
+- LinkedIn: [Your Name](https://linkedin.com/in/yourprofile)
+
+---
+
+## 📞 پشتیبانی
+
+در صورت مشکل:
+1. ابتدا بخش [Troubleshooting](#عیبیابی-troubleshooting) را بررسی کنید
+2. لاگ‌های برنامه را چک کنید
+3. Issue جدید در GitHub باز کنید
+
+---
+
+## 🙏 تشکر
+
+از استفاده از این پروژه متشکریم!
+
+**نکته**: این پروژه برای مقاصد آموزشی و استخدامی طراحی شده است.
+
+---
+
+## 📋 Checklist قبل از ارسال
+
+- [ ] کد بدون خطا کامپایل می‌شود
+- [ ] دیتابیس با Migration ایجاد می‌شود
+- [ ] تمام CRUD عملیات کار می‌کنند
+- [ ] Validation ها صحیح هستند
+- [ ] جستجو در تمام فیلدها کار می‌کند
+- [ ] تصاویر آپلود و نمایش داده می‌شوند
+- [ ] تاریخ شمسی صحیح نمایش داده می‌شود
+- [ ] حذف با تاییدیه کار می‌کند
+- [ ] شماره تکراری Reject می‌شود
+- [ ] Exception Handling صحیح است
+- [ ] لاگ‌ها ذخیره می‌شوند
+- [ ] رابط کاربری RTL و فارسی است
+- [ ] بکاپ دیتابیس آماده است
+- [ ] اسکرین‌شات‌ها گرفته شده
+- [ ] ویدیوی دمو ضبط شده
+
+**موفق باشید! 🎉**

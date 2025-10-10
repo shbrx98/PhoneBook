@@ -11,5 +11,6 @@ namespace PhoneBook.Application.Services
         Task<int> CreateContactAsync(CreateContactDto dto);
         Task UpdateContactAsync(UpdateContactDto dto);
         Task DeleteContactAsync(int id);
+        Task<bool> IsMobileNumberExistsAsync(string mobileNumber, int? contactId = null);
     }
 }
