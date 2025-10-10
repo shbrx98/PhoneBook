@@ -1,4 +1,4 @@
-using MD.PersianDateTime.Standard;
+using MD.PersianDateTime;
 
 namespace PhoneBook.Web.Models.Extensions
 {

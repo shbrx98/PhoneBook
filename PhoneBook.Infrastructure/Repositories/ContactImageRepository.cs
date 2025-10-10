@@ -5,26 +5,41 @@ using PhoneBook.Infrastructure.Data;
 
 namespace PhoneBook.Infrastructure.Repositories
 {
-    public class ContactImageRepository : Repository<ContactImage>, IContactImageRepository
+    public class ContactImageRepository : IContactImageRepository
     {
-        public ContactImageRepository(ApplicationDbContext context) : base(context)
+        private readonly ApplicationDbContext _context;
+
+        public ContactImageRepository(ApplicationDbContext context)
         {
+            _context = context;
         }
 
         public async Task<ContactImage?> GetByContactIdAsync(int contactId)
         {
-            return await _dbSet.FirstOrDefaultAsync(ci => ci.ContactId == contactId);
+            return await _context.ContactImages
+                .FirstOrDefaultAsync(i => i.ContactId == contactId);
         }
 
-        public async Task DeleteByContactIdAsync(int contactId)
+        public async Task AddAsync(ContactImage image)
+        {
+            await _context.ContactImages.AddAsync(image);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(ContactImage image)
+        {
+            _context.ContactImages.Update(image);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(int contactId)
         {
             var image = await GetByContactIdAsync(contactId);
             if (image != null)
             {
-                Delete(image);
+                _context.ContactImages.Remove(image);
+                await _context.SaveChangesAsync();
             }
         }
     }
 }
-
-

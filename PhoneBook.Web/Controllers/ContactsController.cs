@@ -28,13 +28,14 @@ namespace PhoneBook.Web.Controllers
         }
 
         // GET: Contacts
-        public async Task<IActionResult> Index(ContactSearchDto searchDto)
+        public async Task<IActionResult> Index(SearchContactDto searchDto)
         {
             try
             {
                 IEnumerable<ContactDto> contacts;
                 bool hasSearch = false;
 
+                // ⭐ تصحیح: SearchTerm به جای FullName
                 if (!string.IsNullOrWhiteSpace(searchDto.SearchTerm) ||
                     !string.IsNullOrWhiteSpace(searchDto.BirthDateFrom) ||
                     !string.IsNullOrWhiteSpace(searchDto.BirthDateTo))
@@ -60,7 +61,7 @@ namespace PhoneBook.Web.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "خطا در نمایش لیست مخاطبین");
-                TempData["Error"] = ErrorMessages.UnexpectedError;
+                TempData["Error"] = "خطا در دریافت لیست مخاطبین";
                 return View(new ContactListViewModel());
             }
         }
@@ -97,13 +98,7 @@ namespace PhoneBook.Web.Controllers
         // GET: Contacts/Create
         public IActionResult Create()
         {
-            var viewModel = new ContactFormViewModel
-            {
-                CreateDto = new CreateContactDto(),
-                IsEditMode = false
-            };
-
-            return View(viewModel);
+            return View(new CreateContactDto());
         }
 
         // POST: Contacts/Create
@@ -113,6 +108,10 @@ namespace PhoneBook.Web.Controllers
         {
             try
             {
+                // Debug: چاپ داده‌های دریافتی
+                _logger.LogInformation("Creating contact: Name={Name}, Mobile={Mobile}", 
+                    dto.FullName, dto.MobileNumber);
+
                 // Validation
                 var validationResult = await _createValidator.ValidateAsync(dto);
                 if (!validationResult.IsValid)
@@ -120,48 +119,22 @@ namespace PhoneBook.Web.Controllers
                     foreach (var error in validationResult.Errors)
                     {
                         ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
+                        _logger.LogWarning("Validation error: {Field} = {Message}", 
+                            error.PropertyName, error.ErrorMessage);
                     }
-
-                    var errorViewModel = new ContactFormViewModel
-                    {
-                        CreateDto = dto,
-                        IsEditMode = false
-                    };
-                    return View(errorViewModel);
-                }
-
-                // Image validation
-                if (dto.Image != null)
-                {
-                    var (isValid, errorMessage, _) = await ImageHelper.ValidateAndProcessImageAsync(dto.Image);
-                    if (!isValid)
-                    {
-                        ModelState.AddModelError(nameof(dto.Image), errorMessage!);
-                        var errorViewModel = new ContactFormViewModel
-                        {
-                            CreateDto = dto,
-                            IsEditMode = false
-                        };
-                        return View(errorViewModel);
-                    }
+                    return View(dto);
                 }
 
                 // Create contact
                 await _contactService.CreateContactAsync(dto);
-                TempData["Success"] = SuccessMessages.ContactCreated;
+                TempData["Success"] = "مخاطب با موفقیت ایجاد شد";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "خطا در ایجاد مخاطب جدید");
-                TempData["Error"] = ex.Message;
-
-                var errorViewModel = new ContactFormViewModel
-                {
-                    CreateDto = dto,
-                    IsEditMode = false
-                };
-                return View(errorViewModel);
+                ModelState.AddModelError("", ex.Message);
+                return View(dto);
             }
         }
 

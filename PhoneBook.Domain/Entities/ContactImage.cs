@@ -1,28 +1,17 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace PhoneBook.Domain.Entities
 {
-    public class ContactImage : BaseEntity
+    public class ContactImage
     {
-        [Required]
+        public int Id { get; set; }
         public int ContactId { get; set; }
-
-        [Required]
         public byte[] ImageData { get; set; } = Array.Empty<byte>();
-
-        [Required]
-        [MaxLength(100)]
+        public string ContentType { get; set; } = "image/jpeg";
         public string FileName { get; set; } = string.Empty;
-
-        [Required]
-        [MaxLength(50)]
-        public string ContentType { get; set; } = string.Empty;
-
         public long FileSize { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
 
         // Navigation Property
-        [ForeignKey(nameof(ContactId))]
         public Contact Contact { get; set; } = null!;
     }
 }

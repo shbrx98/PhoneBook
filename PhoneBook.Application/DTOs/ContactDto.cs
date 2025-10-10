@@ -30,17 +30,13 @@ namespace PhoneBook.Application.DTOs
         public bool RemoveImage { get; set; }
     }
 
-    public class ContactSearchDto
+    public class SearchContactDto
     {
+        public string? FullName { get; set; }
+        public string? MobileNumber { get; set; }
         public string? SearchTerm { get; set; }
+        
         public string? BirthDateFrom { get; set; }
         public string? BirthDateTo { get; set; }
-    }
-
-    public class ContactImageDto
-    {
-        public byte[] ImageData { get; set; } = Array.Empty<byte>();
-        public string ContentType { get; set; } = string.Empty;
-        public string FileName { get; set; } = string.Empty;
     }
 }

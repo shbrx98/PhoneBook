@@ -1,7 +1,7 @@
-@model IEnumerable<PhoneBook.Application.DTOs.ContactDto>
+@model PhoneBook.Web.Models.ViewModels.ContactListViewModel
 @{
     ViewData["Title"] = "لیست مخاطبین";
-    var searchDto = ViewBag.SearchDto as PhoneBook.Application.DTOs.ContactSearchDto;
+    var searchDto = ViewBag.SearchDto as PhoneBook.Application.DTOs.SearchContactDto;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -48,7 +48,7 @@
     </form>
 </div>
 
-@if (Model.Any())
+@if (Model != null && Model.Contacts != null && Model.Contacts.Any())
 {
     <div class="card">
         <div class="card-body">
@@ -64,7 +64,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var contact in Model)
+                        @foreach (var contact in Model.Contacts)
                         {
                             <tr>
                                 <td>

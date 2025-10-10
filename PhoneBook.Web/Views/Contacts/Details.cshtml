@@ -1,4 +1,4 @@
-@model PhoneBook.Application.DTOs.ContactDto
+@model PhoneBook.Web.Models.ViewModels.ContactDetailsViewModel
 @{
     ViewData["Title"] = "جزئیات مخاطب";
 }
@@ -14,10 +14,10 @@
     <div class="card-body">
         <div class="row">
             <div class="col-md-3 text-center">
-                @if (Model.HasImage)
+                @if (Model != null && Model.Contact.HasImage != false )
                 {
-                    <img src="@Url.Action("GetImage", new { id = Model.Id })" 
-                         class="contact-image-large mb-3" alt="@Model.FullName" />
+                    <img src="@Url.Action("GetImage", new { id = Model.Contact.Id })" 
+                         class="contact-image-large mb-3" alt="@Model.Contact.FullName" />
                 }
                 else
                 {
@@ -29,21 +29,21 @@
             <div class="col-md-9">
                 <dl class="row">
                     <dt class="col-sm-3">نام:</dt>
-                    <dd class="col-sm-9">@Model.FullName</dd>
+                    <dd class="col-sm-9">@Model.Contact.FullName</dd>
 
                     <dt class="col-sm-3">شماره موبایل:</dt>
-                    <dd class="col-sm-9" dir="ltr" style="text-align: right;">@Model.MobileNumber</dd>
+                    <dd class="col-sm-9" dir="ltr" style="text-align: right;">@Model.Contact.MobileNumber</dd>
 
                     <dt class="col-sm-3">تاریخ تولد:</dt>
-                    <dd class="col-sm-9">@(Model.BirthDatePersian ?? "-")</dd>
+                    <dd class="col-sm-9">@(Model.Contact.BirthDatePersian ?? "-")</dd>
                 </dl>
 
                 <div class="mt-4">
-                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                    <a asp-action="Edit" asp-route-id="@Model.Contact.Id" class="btn btn-warning">
                         <i class="bi bi-pencil"></i> ویرایش
                     </a>
                     <button type="button" class="btn btn-danger" 
-                            onclick="confirmDelete(@Model.Id, '@Model.FullName')">
+                            onclick="confirmDelete(@Model.Contact.Id, '@Model.Contact.FullName')">
                         <i class="bi bi-trash"></i> حذف
                     </button>
                 </div>
@@ -52,7 +52,7 @@
     </div>
 </div>
 
-<form id="deleteForm" asp-action="Delete" asp-route-id="@Model.Id" method="post" style="display:none;">
+<form id="deleteForm" asp-action="Delete" asp-route-id="@Model.Contact.Id" method="post" style="display:none;">
     @Html.AntiForgeryToken()
 </form>
 

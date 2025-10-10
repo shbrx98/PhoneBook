@@ -1,4 +1,4 @@
-@model PhoneBook.Application.DTOs.UpdateContactDto
+@model PhoneBook.Web.Models.ViewModels.ContactFormViewModel
 @{
     ViewData["Title"] = "ویرایش مخاطب";
     var hasImage = ViewBag.HasImage as bool? ?? false;
@@ -15,25 +15,25 @@
     <div class="card-body">
         <form asp-action="Edit" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
-            <input asp-for="Id" type="hidden" />
+            <input asp-for="UpdateDto.Id" type="hidden" />
             
             <div class="mb-3">
-                <label asp-for="FullName" class="form-label">نام *</label>
-                <input asp-for="FullName" class="form-control" placeholder="نام کامل" />
-                <span asp-validation-for="FullName" class="text-danger"></span>
+                <label asp-for="UpdateDto.FullName" class="form-label">نام *</label>
+                <input asp-for="UpdateDto.FullName" class="form-control" placeholder="نام کامل" />
+                <span asp-validation-for="UpdateDto.FullName" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
-                <label asp-for="MobileNumber" class="form-label">شماره موبایل *</label>
-                <input asp-for="MobileNumber" class="form-control" placeholder="09123456789" 
+                <label asp-for="UpdateDto.MobileNumber" class="form-label">شماره موبایل *</label>
+                <input asp-for="UpdateDto.MobileNumber" class="form-control" placeholder="09123456789" 
                        maxlength="11" dir="ltr" />
-                <span asp-validation-for="MobileNumber" class="text-danger"></span>
+                <span asp-validation-for="UpdateDto.MobileNumber" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
-                <label asp-for="BirthDate" class="form-label">تاریخ تولد (میلادی)</label>
-                <input asp-for="BirthDate" type="date" class="form-control" />
-                <span asp-validation-for="BirthDate" class="text-danger"></span>
+                <label asp-for="UpdateDto.BirthDate" class="form-label">تاریخ تولد (میلادی)</label>
+                <input asp-for="UpdateDto.BirthDate" type="date" class="form-control" />
+                <span asp-validation-for="UpdateDto.BirthDate" class="text-danger"></span>
             </div>
 
             @if (hasImage)
@@ -41,12 +41,12 @@
                 <div class="mb-3">
                     <label class="form-label">تصویر فعلی</label>
                     <div>
-                        <img src="@Url.Action("GetImage", new { id = Model.Id })" 
+                        <img src="@Url.Action("GetImage", new { id = Model.UpdateDto.Id })" 
                              class="contact-image-large mb-2" alt="تصویر فعلی" />
                     </div>
                     <div class="form-check">
-                        <input asp-for="RemoveImage" class="form-check-input" type="checkbox" />
-                        <label asp-for="RemoveImage" class="form-check-label">
+                        <input asp-for="UpdateDto.RemoveImage" class="form-check-input" type="checkbox" />
+                        <label asp-for="UpdateDto.RemoveImage" class="form-check-label">
                             حذف تصویر
                         </label>
                     </div>
@@ -54,11 +54,11 @@
             }
 
             <div class="mb-3">
-                <label asp-for="Image" class="form-label">
+                <label asp-for="UpdateDto.Image" class="form-label">
                     @(hasImage ? "تصویر جدید" : "تصویر")
                 </label>
-                <input asp-for="Image" type="file" class="form-control" accept="image/*" />
-                <span asp-validation-for="Image" class="text-danger"></span>
+                <input asp-for="UpdateDto.Image" type="file" class="form-control" accept="image/*" />
+                <span asp-validation-for="UpdateDto.Image" class="text-danger"></span>
                 <small class="form-text text-muted">فرمت‌های مجاز: JPG, PNG, GIF (حداکثر 5MB)</small>
             </div>
 

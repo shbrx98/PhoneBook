@@ -5,65 +5,85 @@ using PhoneBook.Infrastructure.Data;
 
 namespace PhoneBook.Infrastructure.Repositories
 {
-    public class ContactRepository : Repository<Contact>, IContactRepository
+    public class ContactRepository : IContactRepository
     {
-        public ContactRepository(ApplicationDbContext context) : base(context)
+        private readonly ApplicationDbContext _context;
+
+        public ContactRepository(ApplicationDbContext context)
         {
+            _context = context;
         }
 
-        public async Task<IEnumerable<Contact>> SearchContactsAsync(
-            string? searchTerm,
-            DateTime? birthDateFrom,
-            DateTime? birthDateTo)
+        public async Task<IEnumerable<Contact>> GetAllAsync()
         {
-            var query = _dbSet.Include(c => c.ContactImage).AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(searchTerm))
-            {
-                searchTerm = searchTerm.Trim().ToLower();
-                query = query.Where(c =>
-                    c.FullName.ToLower().Contains(searchTerm) ||
-                    c.MobileNumber.Contains(searchTerm));
-            }
-
-            if (birthDateFrom.HasValue)
-            {
-                query = query.Where(c => c.BirthDate >= birthDateFrom.Value);
-            }
-
-            if (birthDateTo.HasValue)
-            {
-                query = query.Where(c => c.BirthDate <= birthDateTo.Value);
-            }
-
-            return await query.OrderBy(c => c.FullName).ToListAsync();
+            return await _context.Contacts
+                .Include(c => c.ContactImage)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
         }
 
-        public async Task<bool> IsMobileNumberExistsAsync(string mobileNumber, int? excludeContactId = null)
+        public async Task<Contact?> GetByIdAsync(int id)
         {
-            var query = _dbSet.Where(c => c.MobileNumber == mobileNumber);
-
-            if (excludeContactId.HasValue)
-            {
-                query = query.Where(c => c.Id != excludeContactId.Value);
-            }
-
-            return await query.AnyAsync();
+            return await _context.Contacts.FindAsync(id);
         }
 
-        public async Task<Contact?> GetContactWithImageAsync(int id)
+        public async Task<Contact?> GetByIdWithImageAsync(int id)
         {
-            return await _dbSet
+            return await _context.Contacts
                 .Include(c => c.ContactImage)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
-        public override async Task<IEnumerable<Contact>> GetAllAsync()
+        public async Task<bool> PhoneNumberExistsAsync(string phoneNumber, int? excludeId = null)
         {
-            return await _dbSet
-                .Include(c => c.ContactImage)
-                .OrderBy(c => c.FullName)
-                .ToListAsync();
+            var query = _context.Contacts.Where(c => c.MobileNumber == phoneNumber);
+
+            if (excludeId.HasValue)
+                query = query.Where(c => c.Id != excludeId.Value);
+
+            return await query.AnyAsync();
+        }
+
+        public async Task<IEnumerable<Contact>> SearchAsync(string? name, string? phone, DateTime? birthFrom, DateTime? birthTo)
+        {
+            var query = _context.Contacts.Include(c => c.ContactImage).AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(name))
+                query = query.Where(c => c.FullName.Contains(name));
+
+            if (!string.IsNullOrWhiteSpace(phone))
+                query = query.Where(c => c.MobileNumber.Contains(phone));
+
+            if (birthFrom.HasValue)
+                query = query.Where(c => c.BirthDate >= birthFrom.Value);
+
+            if (birthTo.HasValue)
+                query = query.Where(c => c.BirthDate <= birthTo.Value);
+
+            return await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
+        }
+
+        public async Task<Contact> AddAsync(Contact contact)
+        {
+            await _context.Contacts.AddAsync(contact);
+            await _context.SaveChangesAsync();
+            return contact;
+        }
+
+        public async Task UpdateAsync(Contact contact)
+        {
+            _context.Contacts.Update(contact);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            var contact = await GetByIdAsync(id);
+            if (contact != null)
+            {
+                _context.Contacts.Remove(contact);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }
