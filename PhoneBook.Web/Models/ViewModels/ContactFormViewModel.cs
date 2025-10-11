@@ -10,4 +10,5 @@ namespace PhoneBook.Web.Models.ViewModels
         public bool HasImage { get; set; }
         public string? ImageUrl { get; set; }
     }
+    
 }

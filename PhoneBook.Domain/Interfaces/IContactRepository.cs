@@ -12,6 +12,7 @@ namespace PhoneBook.Domain.Interfaces
         Task<Contact> AddAsync(Contact contact);
         Task UpdateAsync(Contact contact);
         Task DeleteAsync(int id);
-        
+        void Update(Contact contact);
+
   }
 }

@@ -95,50 +95,10 @@ namespace PhoneBook.Web.Controllers
             }
         }
 
-        // GET: Contacts/Create
-        public IActionResult Create()
-        {
-            return View(new CreateContactDto());
-        }
 
-        // POST: Contacts/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(CreateContactDto dto)
-        {
-            try
-            {
-                // Debug: چاپ داده‌های دریافتی
-                _logger.LogInformation("Creating contact: Name={Name}, Mobile={Mobile}", 
-                    dto.FullName, dto.MobileNumber);
-
-                // Validation
-                var validationResult = await _createValidator.ValidateAsync(dto);
-                if (!validationResult.IsValid)
-                {
-                    foreach (var error in validationResult.Errors)
-                    {
-                        ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
-                        _logger.LogWarning("Validation error: {Field} = {Message}", 
-                            error.PropertyName, error.ErrorMessage);
-                    }
-                    return View(dto);
-                }
-
-                // Create contact
-                await _contactService.CreateContactAsync(dto);
-                TempData["Success"] = "مخاطب با موفقیت ایجاد شد";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "خطا در ایجاد مخاطب جدید");
-                ModelState.AddModelError("", ex.Message);
-                return View(dto);
-            }
-        }
-
+       
         // GET: Contacts/Edit/5
+        [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
             try
@@ -146,32 +106,30 @@ namespace PhoneBook.Web.Controllers
                 var contact = await _contactService.GetContactByIdAsync(id);
                 if (contact == null)
                 {
-                    TempData["Error"] = ErrorMessages.ContactNotFound;
+                    TempData["Error"] = "مخاطب یافت نشد";
                     return RedirectToAction(nameof(Index));
                 }
 
-                var dto = new UpdateContactDto
+            var hasImage = contact.HasImage;
+            
+            var viewModel = new ContactFormViewModel
+            {
+                UpdateDto = new UpdateContactDto
                 {
                     Id = contact.Id,
                     FullName = contact.FullName,
                     MobileNumber = contact.MobileNumber,
                     BirthDate = contact.BirthDate
-                };
+                }
+            };
 
-                var viewModel = new ContactFormViewModel
-                {
-                    UpdateDto = dto,
-                    IsEditMode = true,
-                    HasImage = contact.HasImage,
-                    ImageUrl = contact.HasImage ? Url.Action("GetImage", new { id = contact.Id }) : null
-                };
-
-                return View(viewModel);
+            ViewBag.HasImage = hasImage;
+                return View(viewModel.UpdateDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "خطا در نمایش فرم ویرایش مخاطب {Id}", id);
-                TempData["Error"] = ErrorMessages.UnexpectedError;
+                _logger.LogError(ex, "خطا در نمایش فرم ویرایش");
+                TempData["Error"] = "خطا در دریافت اطلاعات";
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -183,48 +141,57 @@ namespace PhoneBook.Web.Controllers
         {
             try
             {
-                _logger.LogInformation("دریافت درخواست ویرایش: Id={Id}, FullName={FullName}, MobileNumber={MobileNumber}, BirthDate={BirthDate}, RemoveImage={RemoveImage}, HasImage={HasImage}",
-                    dto.Id, dto.FullName, dto.MobileNumber, dto.BirthDate, dto.RemoveImage, dto.Image != null);
-
                 var validationResult = await _updateValidator.ValidateAsync(dto);
                 if (!validationResult.IsValid)
                 {
-                    _logger.LogWarning("خطاهای اعتبارسنجی: {Errors}", string.Join(", ", validationResult.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}")));
                     foreach (var error in validationResult.Errors)
                     {
                         ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
                     }
 
-                    var contact = await _contactService.GetContactByIdAsync(dto.Id);
-                    var errorViewModel = new ContactFormViewModel
+                    var viewModel = await BuildEditViewModelAsync(dto);
+                    return View(viewModel);
+                }
+
+                if (dto.Image != null)
+                {
+                    var (isValid, errorMessage, _) = await ImageHelper.ValidateAndProcessImageAsync(dto.Image);
+                    if (!isValid)
                     {
-                        UpdateDto = dto,
-                        IsEditMode = true,
-                        HasImage = contact?.HasImage ?? false,
-                        ImageUrl = contact?.HasImage == true ? Url.Action("GetImage", new { id = dto.Id }) : null
-                    };
-                    return View(errorViewModel);
+                        ModelState.AddModelError(nameof(dto.Image), errorMessage!);
+
+                        var viewModel = await BuildEditViewModelAsync(dto);
+                        return View(viewModel);
+                    }
                 }
 
                 await _contactService.UpdateContactAsync(dto);
-                TempData["Success"] = "مخاطب با موفقیت ویرایش شد";
+                TempData["Success"] = SuccessMessages.ContactUpdated;
+
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "خطا در ویرایش مخاطب {Id}. جزئیات: {Message}", dto.Id, ex.Message);
+                _logger.LogError(ex, "خطا در ویرایش مخاطب {Id}", dto.Id);
                 TempData["Error"] = ex.Message;
 
-                var contact = await _contactService.GetContactByIdAsync(dto.Id);
-                var errorViewModel = new ContactFormViewModel
-                {
-                    UpdateDto = dto,
-                    IsEditMode = true,
-                    HasImage = contact?.HasImage ?? false,
-                    ImageUrl = contact?.HasImage == true ? Url.Action("GetImage", new { id = dto.Id }) : null
-                };
-                return View(errorViewModel);
+                var viewModel = await BuildEditViewModelAsync(dto);
+                return View(viewModel);
             }
+        }
+
+
+        private async Task<ContactFormViewModel> BuildEditViewModelAsync(UpdateContactDto dto)
+        {
+            var contact = await _contactService.GetContactByIdAsync(dto.Id);
+
+            return new ContactFormViewModel
+            {
+                UpdateDto = dto,
+                IsEditMode = true,
+                HasImage = contact?.HasImage ?? false,
+                ImageUrl = contact?.HasImage == true ? Url.Action("GetImage", new { id = dto.Id }) : null
+            };
         }
 
         // POST: Contacts/Delete/5

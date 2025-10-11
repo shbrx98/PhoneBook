@@ -72,8 +72,9 @@ namespace PhoneBook.Infrastructure.Repositories
 
         public async Task UpdateAsync(Contact contact)
         {
+            // _context.Entry(contact).State = EntityState.Modified;
             _context.Contacts.Update(contact);
-            // await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int contactId)
@@ -86,6 +87,11 @@ namespace PhoneBook.Infrastructure.Repositories
             }
         }
 
+        public void Update(Contact contact)
+        {
+            _context.Entry(contact).State = EntityState.Modified;
+            _context.Contacts.Update(contact);
+        }
 
     }
 }

@@ -157,63 +157,83 @@ namespace PhoneBook.Application.Services
         }
 
         public async Task UpdateContactAsync(UpdateContactDto dto)
-{
-    try
-    {
-        await _unitOfWork.BeginTransactionAsync();
-
-        var contact = await _unitOfWork.Contacts.GetByIdAsync(dto.Id);
-        if (contact == null)
         {
-            throw new NotFoundException($"مخاطب با شناسه {dto.Id} یافت نشد");
-        }
-
-        // Check duplicate mobile number
-        if (await _unitOfWork.Contacts.PhoneNumberExistsAsync(dto.MobileNumber, dto.Id))
-        {
-            throw new BusinessException("این شماره موبایل قبلاً ثبت شده است");
-        }
-
-        // Update contact fields
-        contact.FullName = dto.FullName.Trim();
-        contact.MobileNumber = dto.MobileNumber.Trim();
-        contact.BirthDate = dto.BirthDate;
-        contact.UpdatedAt = DateTime.Now;
-
-        await _unitOfWork.Contacts.UpdateAsync(contact);
-
-        // Handle image
-        if (dto.RemoveImage)
-        {
-            var existingImage = await _unitOfWork.ContactImages.GetByContactIdAsync(dto.Id);
-            if (existingImage != null)
+            try
             {
-                await _unitOfWork.ContactImages.DeleteAsync(existingImage.ContactId);
+                _logger.LogInformation("=== شروع Update مخاطب {Id} ===", dto.Id);
+                
+                await _unitOfWork.BeginTransactionAsync();
+                
+                // 1. Get contact
+                _logger.LogInformation("دریافت مخاطب {Id}", dto.Id);
+                var contact = await _unitOfWork.Contacts.GetByIdAsync(dto.Id);
+                if (contact == null)
+                {
+                    throw new NotFoundException($"مخاطب با شناسه {dto.Id} یافت نشد");
+                }
+                
+                _logger.LogInformation("مخاطب فعلی: Name={Name}, Mobile={Mobile}", 
+                    contact.FullName, contact.MobileNumber);
+                
+                // 2. Check duplicate mobile
+                if (!string.IsNullOrWhiteSpace(dto.MobileNumber) &&
+                    await _unitOfWork.Contacts.PhoneNumberExistsAsync(dto.MobileNumber, dto.Id))
+                {
+                    throw new BusinessException("این شماره موبایل قبلاً ثبت شده است");
+                }
+                
+                // 3. Update fields - بدون if!
+                _logger.LogInformation("به‌روزرسانی فیلدها: Name={Name}, Mobile={Mobile}", 
+                    dto.FullName, dto.MobileNumber);
+                
+                contact.FullName = dto.FullName.Trim();
+                contact.MobileNumber = dto.MobileNumber.Trim();
+                contact.BirthDate = dto.BirthDate;
+                contact.UpdatedAt = DateTime.Now;
+                
+                
+                _unitOfWork.Contacts.Update(contact);
+                
+                _logger.LogInformation("صدا زدن SaveChanges...");
+                var savedCount = await _unitOfWork.SaveChangesAsync();
+                _logger.LogInformation("تعداد Entity های ذخیره شده: {Count}", savedCount);
+                
+                // 4. Handle image
+                var existingImage = await _unitOfWork.ContactImages.GetByContactIdAsync(dto.Id);
+                
+                if (dto.RemoveImage && existingImage != null)
+                {
+                    _logger.LogInformation("حذف تصویر");
+                    await _unitOfWork.ContactImages.DeleteAsync(existingImage.ContactId);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                else if (dto.Image != null && dto.Image.Length > 0)
+                {
+                    if (existingImage != null)
+                    {
+                        _logger.LogInformation("حذف تصویر قبلی");
+                        await _unitOfWork.ContactImages.DeleteAsync(existingImage.ContactId);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                    
+                    _logger.LogInformation("ذخیره تصویر جدید");
+                    await SaveContactImageAsync(dto.Id, dto.Image);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                
+                await _unitOfWork.CommitTransactionAsync();
+                _logger.LogInformation("=== Update موفق - مخاطب {Id} ===", dto.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "خطا در Update: {Message}", ex.Message);
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
             }
         }
-        else if (dto.Image != null && dto.Image.Length > 0)
-        {
-            var existingImage = await _unitOfWork.ContactImages.GetByContactIdAsync(dto.Id);
-            if (existingImage != null)
-            {
-                await _unitOfWork.ContactImages.DeleteAsync(existingImage.Id);
-            }
-            await SaveContactImageAsync(dto.Id, dto.Image);
-        }
 
-        // Save all changes
-        await _unitOfWork.SaveChangesAsync();
-        await _unitOfWork.CommitTransactionAsync();
 
-        _logger.LogInformation("مخاطب با شناسه {Id} به‌روزرسانی شد", dto.Id);
-    }
-    catch (Exception ex)
-    {
-        await _unitOfWork.RollbackTransactionAsync();
-        _logger.LogError(ex, "خطا در به‌روزرسانی مخاطب {Id}. جزئیات: {Message}", dto.Id, ex.Message);
-        throw;
-    }
-}        public async Task DeleteContactAsync(int id)
+        public async Task DeleteContactAsync(int id)
         {
             try
             {

@@ -12,12 +12,12 @@ namespace PhoneBook.Application.Validators
                 .GreaterThan(0).WithMessage("شناسه نامعتبر است");
 
             RuleFor(x => x.FullName)
-                .NotEmpty().WithMessage("نام الزامی است")
-                .MaximumLength(100).WithMessage("نام نباید بیشتر از 100 کاراکتر باشد");
+                .NotEmpty().When(x => !string.IsNullOrWhiteSpace(x.FullName)).WithMessage("نام الزامی است")
+                .MaximumLength(100).When(x => !string.IsNullOrWhiteSpace(x.FullName)).WithMessage("نام نباید بیشتر از 100 کاراکتر باشد");
 
             RuleFor(x => x.MobileNumber)
-                .NotEmpty().WithMessage("شماره همراه الزامی است")
-                .Matches(@"^09\d{9}$").WithMessage("شماره همراه باید 11 رقمی و با 09 شروع شود");
+                .NotEmpty().When(x => !string.IsNullOrWhiteSpace(x.MobileNumber)).WithMessage("شماره همراه الزامی است")
+                .Matches(@"^09\d{9}$").When(x => !string.IsNullOrWhiteSpace(x.MobileNumber)).WithMessage("شماره همراه باید 11 رقمی و با 09 شروع شود");
 
             RuleFor(x => x.BirthDate)
                 .LessThanOrEqualTo(DateTime.Today).WithMessage("تاریخ تولد نمی‌تواند در آینده باشد")
