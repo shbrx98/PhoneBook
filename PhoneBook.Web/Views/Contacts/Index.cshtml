@@ -1,0 +1,130 @@
+@model PhoneBook.Web.Models.ViewModels.ContactListViewModel
+@{
+    ViewData["Title"] = "لیست مخاطبین";
+    var searchDto = ViewBag.SearchDto as PhoneBook.Application.DTOs.SearchContactDto;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people-fill"></i> لیست مخاطبین</h2>
+    <a asp-action="Create" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> مخاطب جدید
+    </a>
+</div>
+
+<div class="search-box">
+    <form asp-action="Index" method="get">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">جستجو در نام و شماره</label>
+                <input type="text" class="form-control" name="SearchTerm" 
+                       value="@searchDto?.SearchTerm" placeholder="نام یا شماره موبایل..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">تاریخ تولد از</label>
+                <input type="text" class="form-control" name="BirthDateFrom" 
+                       value="@searchDto?.BirthDateFrom" placeholder="1380/01/01" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">تاریخ تولد تا</label>
+                <input type="text" class="form-control" name="BirthDateTo" 
+                       value="@searchDto?.BirthDateTo" placeholder="1400/12/29" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> جستجو
+                </button>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(searchDto?.SearchTerm) || 
+             !string.IsNullOrEmpty(searchDto?.BirthDateFrom) || 
+             !string.IsNullOrEmpty(searchDto?.BirthDateTo))
+        {
+            <div class="mt-2">
+                <a asp-action="Index" class="btn btn-sm btn-secondary">
+                    <i class="bi bi-x-circle"></i> پاک کردن فیلترها
+                </a>
+            </div>
+        }
+    </form>
+</div>
+
+@if (Model != null && Model.Contacts != null && Model.Contacts.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>تصویر</th>
+                            <th>نام</th>
+                            <th>شماره موبایل</th>
+                            <th>تاریخ تولد</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var contact in Model.Contacts)
+                        {
+                            <tr>
+                                <td>
+                                    @if (contact.HasImage)
+                                    {
+                                        <img src="@Url.Action("GetImage", new { id = contact.Id })" 
+                                             class="contact-image" alt="@contact.FullName" />
+                                    }
+                                    else
+                                    {
+                                        <div class="contact-image bg-secondary d-flex align-items-center justify-content-center text-white">
+                                            <i class="bi bi-person-fill fs-3"></i>
+                                        </div>
+                                    }
+                                </td>
+                                <td>@contact.FullName</td>
+                                <td dir="ltr" class="text-end">@contact.MobileNumber</td>
+                                <td>@(contact.BirthDatePersian ?? "-")</td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@contact.Id" 
+                                       class="btn btn-sm btn-info btn-action">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@contact.Id" 
+                                       class="btn btn-sm btn-warning btn-action">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger btn-action" 
+                                            onclick="confirmDelete(@contact.Id, '@contact.FullName')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center">
+        <i class="bi bi-info-circle fs-3"></i>
+        <p class="mb-0 mt-2">هیچ مخاطبی یافت نشد</p>
+    </div>
+}
+
+<form id="deleteForm" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            if (confirm('آیا از حذف "' + name + '" اطمینان دارید؟')) {
+                var form = document.getElementById('deleteForm');
+                form.action = '/Contacts/Delete/' + id;
+                form.submit();
+            }
+        }
+    </script>
+}

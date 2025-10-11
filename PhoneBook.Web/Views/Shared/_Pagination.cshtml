@@ -1,0 +1,35 @@
+@model (int currentPage, int totalPages, string actionName, object routeValues)
+
+@if (Model.totalPages > 1)
+{
+    <nav aria-label="صفحه‌بندی">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.currentPage == 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="@Model.actionName" 
+                   asp-all-route-data="@((IDictionary<string, string>)Model.routeValues)"
+                   asp-route-page="@(Model.currentPage - 1)">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+
+            @for (int i = 1; i <= Model.totalPages; i++)
+            {
+                <li class="page-item @(Model.currentPage == i ? "active" : "")">
+                    <a class="page-link" asp-action="@Model.actionName"
+                       asp-all-route-data="@((IDictionary<string, string>)Model.routeValues)"
+                       asp-route-page="@i">
+                        @i
+                    </a>
+                </li>
+            }
+
+            <li class="page-item @(Model.currentPage == Model.totalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="@Model.actionName"
+                   asp-all-route-data="@((IDictionary<string, string>)Model.routeValues)"
+                   asp-route-page="@(Model.currentPage + 1)">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+}

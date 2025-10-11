@@ -14,18 +14,24 @@ public class HomeController : Controller
     }
 
     public IActionResult Index()
-    {
-        return View();
-    }
+        {
+            return RedirectToAction("Index", "Contacts");
+        }
 
-    public IActionResult Privacy()
-    {
-        return View();
-    }
+        public IActionResult Privacy()
+        {
+            return View();
+        }
 
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
-    {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-    }
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error(string? message)
+        {
+            var viewModel = new PhoneBook.Web.Models.ViewModels.ErrorViewModel
+            {
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier,
+                ErrorMessage = message ?? "Unexpected error occurred"
+            };
+
+            return View(viewModel);
+        }
 }
