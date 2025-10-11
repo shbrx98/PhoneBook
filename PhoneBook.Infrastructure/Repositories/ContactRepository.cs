@@ -73,17 +73,19 @@ namespace PhoneBook.Infrastructure.Repositories
         public async Task UpdateAsync(Contact contact)
         {
             _context.Contacts.Update(contact);
-            await _context.SaveChangesAsync();
+            // await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(int contactId)
         {
-            var contact = await GetByIdAsync(id);
+            var contact = await GetByIdAsync(contactId);
             if (contact != null)
             {
                 _context.Contacts.Remove(contact);
-                await _context.SaveChangesAsync();
+                
             }
         }
+
+
     }
 }

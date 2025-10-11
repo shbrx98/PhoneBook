@@ -1,33 +1,20 @@
+using Microsoft.Extensions.Logging;
 using PhoneBook.Application.DTOs;
+using PhoneBook.Application.Exceptions;
 using PhoneBook.Domain.Entities;
 using PhoneBook.Domain.Interfaces;
-using FluentValidation;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Http;
-using System.Globalization;
+using MD.PersianDateTime;
 
 namespace PhoneBook.Application.Services
 {
     public class ContactService : IContactService
     {
-        private readonly IContactRepository _contactRepository;
-        private readonly IContactImageRepository _imageRepository;
-        private readonly IValidator<CreateContactDto> _createValidator;
-        private readonly IValidator<UpdateContactDto> _updateValidator;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ContactService> _logger;
-        private static readonly PersianCalendar _persianCalendar = new();
 
-        public ContactService(
-            IContactRepository contactRepository,
-            IContactImageRepository imageRepository,
-            IValidator<CreateContactDto> createValidator,
-            IValidator<UpdateContactDto> updateValidator,
-            ILogger<ContactService> logger)
+        public ContactService(IUnitOfWork unitOfWork, ILogger<ContactService> logger)
         {
-            _contactRepository = contactRepository;
-            _imageRepository = imageRepository;
-            _createValidator = createValidator;
-            _updateValidator = updateValidator;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
@@ -35,13 +22,13 @@ namespace PhoneBook.Application.Services
         {
             try
             {
-                var contacts = await _contactRepository.GetAllAsync();
+                var contacts = await _unitOfWork.Contacts.GetAllAsync();
                 return contacts.Select(MapToDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all contacts");
-                return Enumerable.Empty<ContactDto>();
+                _logger.LogError(ex, "خطا در دریافت لیست مخاطبین");
+                throw;
             }
         }
 
@@ -49,13 +36,13 @@ namespace PhoneBook.Application.Services
         {
             try
             {
-                var contact = await _contactRepository.GetByIdWithImageAsync(id);
+                var contact = await _unitOfWork.Contacts.GetByIdWithImageAsync(id);
                 return contact != null ? MapToDto(contact) : null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting contact {ContactId}", id);
-                return null;
+                _logger.LogError(ex, "خطا در دریافت مخاطب با شناسه {Id}", id);
+                throw;
             }
         }
 
@@ -63,47 +50,79 @@ namespace PhoneBook.Application.Services
         {
             try
             {
-                return await _imageRepository.GetByContactIdAsync(contactId);
+                var image = await _unitOfWork.ContactImages.GetByContactIdAsync(contactId);
+                if (image == null) return null;
+
+                return new ContactImage
+                {
+                    ImageData = image.ImageData,
+                    ContentType = image.ContentType,
+                    FileName = image.FileName
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting image for contact {ContactId}", contactId);
-                return null;
+                _logger.LogError(ex, "خطا در دریافت تصویر مخاطب {ContactId}", contactId);
+                throw;
             }
         }
 
-        public async Task<IEnumerable<ContactDto>> SearchContactsAsync(SearchContactDto search)
+        public async Task<IEnumerable<ContactDto>> SearchContactsAsync(SearchContactDto searchDto)
         {
             try
             {
-                var contacts = await _contactRepository.SearchAsync(
-                    search.FullName,
-                    search.MobileNumber,
-                    string.IsNullOrEmpty(search.BirthDateFrom) ? (DateTime?)null : DateTime.Parse(search.BirthDateFrom),
-                    string.IsNullOrEmpty(search.BirthDateTo) ? (DateTime?)null : DateTime.Parse(search.BirthDateTo));
-                
+                DateTime? birthDateFrom = null;
+                DateTime? birthDateTo = null;
+
+                if (!string.IsNullOrWhiteSpace(searchDto.BirthDateFrom))
+                {
+                    try
+                    {
+                        birthDateFrom = PersianDateTime.Parse(searchDto.BirthDateFrom).ToDateTime();
+                    }
+                    catch
+                    {
+                        _logger.LogWarning("تاریخ از نامعتبر: {Date}", searchDto.BirthDateFrom);
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(searchDto.BirthDateTo))
+                {
+                    try
+                    {
+                        birthDateTo = PersianDateTime.Parse(searchDto.BirthDateTo).ToDateTime();
+                    }
+                    catch
+                    {
+                        _logger.LogWarning("تاریخ تا نامعتبر: {Date}", searchDto.BirthDateTo);
+                    }
+                }
+
+                var contacts = await _unitOfWork.Contacts.SearchAsync(
+                    searchDto.SearchTerm,
+                    searchDto.FullName,
+                    birthDateFrom,
+                    birthDateTo);
+
                 return contacts.Select(MapToDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error searching contacts");
-                return Enumerable.Empty<ContactDto>();
+                _logger.LogError(ex, "خطا در جستجوی مخاطبین");
+                throw;
             }
         }
 
-        public async Task<ServiceResult<int>> CreateContactAsync(CreateContactDto dto)
+        public async Task<int> CreateContactAsync(CreateContactDto dto)
         {
             try
             {
-                var validationResult = await _createValidator.ValidateAsync(dto);
-                if (!validationResult.IsValid)
-                {
-                    return ServiceResult<int>.Fail(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
-                }
+                await _unitOfWork.BeginTransactionAsync();
 
-                if (await _contactRepository.PhoneNumberExistsAsync(dto.MobileNumber))
+                // Check duplicate mobile number
+                if (await _unitOfWork.Contacts.PhoneNumberExistsAsync(dto.MobileNumber))
                 {
-                    return ServiceResult<int>.Fail("شماره همراه تکراری است");
+                    throw new BusinessException("این شماره موبایل قبلاً ثبت شده است");
                 }
 
                 var contact = new Contact
@@ -111,164 +130,181 @@ namespace PhoneBook.Application.Services
                     FullName = dto.FullName.Trim(),
                     MobileNumber = dto.MobileNumber.Trim(),
                     BirthDate = dto.BirthDate,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.Now
                 };
 
-                var createdContact = await _contactRepository.AddAsync(contact);
+                await _unitOfWork.Contacts.AddAsync(contact);
+                await _unitOfWork.SaveChangesAsync();
 
-                if (dto.Image != null)
+                // Handle image if provided
+                if (dto.Image != null && dto.Image.Length > 0)
                 {
-                    await SaveImageAsync(createdContact.Id, dto.Image);
+                    await SaveContactImageAsync(contact.Id, dto.Image);
+                    await _unitOfWork.SaveChangesAsync();
                 }
 
-                _logger.LogInformation("Contact created: {ContactId}", createdContact.Id);
-                return ServiceResult<int>.Ok(createdContact.Id, "مخاطب با موفقیت ایجاد شد");
+                await _unitOfWork.CommitTransactionAsync();
+                _logger.LogInformation("مخاطب جدید با شناسه {Id} ایجاد شد", contact.Id);
+
+                return contact.Id;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating contact");
-                return ServiceResult<int>.Fail("خطا در ایجاد مخاطب");
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "خطا در ایجاد مخاطب جدید");
+                throw;
             }
         }
 
-        public async Task<ServiceResult> UpdateContactAsync(UpdateContactDto dto)
+        public async Task UpdateContactAsync(UpdateContactDto dto)
+{
+    try
+    {
+        await _unitOfWork.BeginTransactionAsync();
+
+        var contact = await _unitOfWork.Contacts.GetByIdAsync(dto.Id);
+        if (contact == null)
+        {
+            throw new NotFoundException($"مخاطب با شناسه {dto.Id} یافت نشد");
+        }
+
+        // Check duplicate mobile number
+        if (await _unitOfWork.Contacts.PhoneNumberExistsAsync(dto.MobileNumber, dto.Id))
+        {
+            throw new BusinessException("این شماره موبایل قبلاً ثبت شده است");
+        }
+
+        // Update contact fields
+        contact.FullName = dto.FullName.Trim();
+        contact.MobileNumber = dto.MobileNumber.Trim();
+        contact.BirthDate = dto.BirthDate;
+        contact.UpdatedAt = DateTime.Now;
+
+        await _unitOfWork.Contacts.UpdateAsync(contact);
+
+        // Handle image
+        if (dto.RemoveImage)
+        {
+            var existingImage = await _unitOfWork.ContactImages.GetByContactIdAsync(dto.Id);
+            if (existingImage != null)
+            {
+                await _unitOfWork.ContactImages.DeleteAsync(existingImage.ContactId);
+            }
+        }
+        else if (dto.Image != null && dto.Image.Length > 0)
+        {
+            var existingImage = await _unitOfWork.ContactImages.GetByContactIdAsync(dto.Id);
+            if (existingImage != null)
+            {
+                await _unitOfWork.ContactImages.DeleteAsync(existingImage.Id);
+            }
+            await SaveContactImageAsync(dto.Id, dto.Image);
+        }
+
+        // Save all changes
+        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.CommitTransactionAsync();
+
+        _logger.LogInformation("مخاطب با شناسه {Id} به‌روزرسانی شد", dto.Id);
+    }
+    catch (Exception ex)
+    {
+        await _unitOfWork.RollbackTransactionAsync();
+        _logger.LogError(ex, "خطا در به‌روزرسانی مخاطب {Id}. جزئیات: {Message}", dto.Id, ex.Message);
+        throw;
+    }
+}        public async Task DeleteContactAsync(int id)
         {
             try
             {
-                var validationResult = await _updateValidator.ValidateAsync(dto);
-                if (!validationResult.IsValid)
-                {
-                    return ServiceResult.Fail(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
-                }
+                await _unitOfWork.BeginTransactionAsync();
 
-                var contact = await _contactRepository.GetByIdAsync(dto.Id);
+                var contact = await _unitOfWork.Contacts.GetByIdAsync(id);
                 if (contact == null)
                 {
-                    return ServiceResult.Fail("مخاطب یافت نشد");
+                    throw new NotFoundException($"مخاطب با شناسه {id} یافت نشد");
                 }
 
-                if (await _contactRepository.PhoneNumberExistsAsync(dto.MobileNumber, dto.Id))
+               
+                var image = await _unitOfWork.ContactImages.GetByContactIdAsync(id);
+                if (image != null)
                 {
-                    return ServiceResult.Fail("شماره همراه تکراری است");
+                    await _unitOfWork.ContactImages.DeleteAsync(image.ContactId);
                 }
 
-                contact.FullName = dto.FullName.Trim();
-                contact.MobileNumber = dto.MobileNumber.Trim();
-                contact.BirthDate = dto.BirthDate;
-                contact.UpdatedAt = DateTime.UtcNow;
+               
+                await _unitOfWork.Contacts.DeleteAsync(contact.Id);
+                
+                
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
-                await _contactRepository.UpdateAsync(contact);
-
-                if (dto.RemoveImage)
-                {
-                    await _imageRepository.DeleteAsync(contact.Id);
-                }
-                else if (dto.Image != null)
-                {
-                    await SaveImageAsync(contact.Id, dto.Image);
-                }
-
-                _logger.LogInformation("Contact updated: {ContactId}", contact.Id);
-                return ServiceResult.Ok("مخاطب با موفقیت ویرایش شد");
+                _logger.LogInformation("مخاطب با شناسه {Id} حذف شد", id);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating contact {ContactId}", dto.Id);
-                return ServiceResult.Fail("خطا در ویرایش مخاطب");
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "خطا در حذف مخاطب {Id}", id);
+                throw;
             }
         }
 
-        public async Task<ServiceResult> DeleteContactAsync(int id)
+        public async Task<bool> IsMobileNumberExistsAsync(string mobileNumber, int? contactId = null)
         {
             try
             {
-                var contact = await _contactRepository.GetByIdAsync(id);
-                if (contact == null)
-                {
-                    return ServiceResult.Fail("مخاطب یافت نشد");
-                }
-
-                await _contactRepository.DeleteAsync(id);
-
-                _logger.LogInformation("Contact deleted: {ContactId}", id);
-                return ServiceResult.Ok("مخاطب با موفقیت حذف شد");
+                return await _unitOfWork.Contacts.PhoneNumberExistsAsync(mobileNumber, contactId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting contact {ContactId}", id);
-                return ServiceResult.Fail("خطا در حذف مخاطب");
+                _logger.LogError(ex, "خطا در بررسی وجود شماره موبایل {MobileNumber}", mobileNumber);
+                throw;
             }
         }
 
-        private async Task SaveImageAsync(int contactId, IFormFile imageFile)
+        private async Task SaveContactImageAsync(int contactId, Microsoft.AspNetCore.Http.IFormFile imageFile)
         {
             using var memoryStream = new MemoryStream();
             await imageFile.CopyToAsync(memoryStream);
 
-            var existingImage = await _imageRepository.GetByContactIdAsync(contactId);
+            var contactImage = new ContactImage
+            {
+                ContactId = contactId,
+                ImageData = memoryStream.ToArray(),
+                FileName = imageFile.FileName,
+                ContentType = imageFile.ContentType,
+                FileSize = imageFile.Length,
+                CreatedAt = DateTime.Now
+            };
 
-            if (existingImage != null)
-            {
-                existingImage.ImageData = memoryStream.ToArray();
-                existingImage.ContentType = imageFile.ContentType;
-                existingImage.FileName = imageFile.FileName;
-                existingImage.FileSize = imageFile.Length;
-                existingImage.UpdatedAt = DateTime.UtcNow;
-                await _imageRepository.UpdateAsync(existingImage);
-            }
-            else
-            {
-                var newImage = new ContactImage
-                {
-                    ContactId = contactId,
-                    ImageData = memoryStream.ToArray(),
-                    ContentType = imageFile.ContentType,
-                    FileName = imageFile.FileName,
-                    FileSize = imageFile.Length,
-                    CreatedAt = DateTime.UtcNow
-                };
-                await _imageRepository.AddAsync(newImage);
-            }
+            await _unitOfWork.ContactImages.AddAsync(contactImage);
         }
 
-        private static ContactDto MapToDto(Contact contact)
+        private ContactDto MapToDto(Contact contact)
         {
-            return new ContactDto
+            var dto = new ContactDto
             {
                 Id = contact.Id,
                 FullName = contact.FullName,
                 MobileNumber = contact.MobileNumber,
                 BirthDate = contact.BirthDate,
-                BirthDatePersian = contact.BirthDate.HasValue
-                    ? ToPersianDate(contact.BirthDate.Value)
-                    : null,
                 HasImage = contact.ContactImage != null
             };
+
+            if (contact.BirthDate.HasValue)
+            {
+                try
+                {
+                    var persianDate = new PersianDateTime(contact.BirthDate.Value);
+                    dto.BirthDatePersian = persianDate.ToString("yyyy/MM/dd");
+                }
+                catch
+                {
+                    dto.BirthDatePersian = contact.BirthDate.Value.ToString("yyyy/MM/dd");
+                }
+            }
+
+            return dto;
         }
-
-        private static string ToPersianDate(DateTime date)
-        {
-            return $"{_persianCalendar.GetYear(date)}/{_persianCalendar.GetMonth(date):D2}/{_persianCalendar.GetDayOfMonth(date):D2}";
-        }
-
-    Task<int> IContactService.CreateContactAsync(CreateContactDto dto)
-    {
-      throw new NotImplementedException();
     }
-
-    Task IContactService.UpdateContactAsync(UpdateContactDto dto)
-    {
-      return UpdateContactAsync(dto);
-    }
-
-    Task IContactService.DeleteContactAsync(int id)
-    {
-      return DeleteContactAsync(id);
-    }
-
-    public Task<bool> IsMobileNumberExistsAsync(string mobileNumber, int? contactId = null)
-    {
-      throw new NotImplementedException();
-    }
-  }
 }

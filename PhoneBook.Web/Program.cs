@@ -31,10 +31,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString, sqlOptions =>
     {
         sqlOptions.MigrationsAssembly("PhoneBook.Infrastructure");
-        sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(30),
-            errorNumbersToAdd: null);
+        sqlOptions.CommandTimeout(60);
+        // sqlOptions.EnableRetryOnFailure(
+        //     maxRetryCount: 5,
+        //     maxRetryDelay: TimeSpan.FromSeconds(30),
+        //     errorNumbersToAdd: null);
     });
 
     if (builder.Environment.IsDevelopment())
