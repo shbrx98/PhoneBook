@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http;
-
+using System.ComponentModel.DataAnnotations;
 namespace PhoneBook.Application.DTOs
 {
     public class ContactDto
@@ -7,6 +7,8 @@ namespace PhoneBook.Application.DTOs
         public int Id { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string MobileNumber { get; set; } = string.Empty;
+        
+        [DataType(DataType.Date)]
         public DateTime? BirthDate { get; set; }
         public string? BirthDatePersian { get; set; }
         public bool HasImage { get; set; }
@@ -16,6 +18,7 @@ namespace PhoneBook.Application.DTOs
     {
         public string FullName { get; set; } = string.Empty;
         public string MobileNumber { get; set; } = string.Empty;
+        
         public DateTime? BirthDate { get; set; }
         public IFormFile? Image { get; set; }
     }

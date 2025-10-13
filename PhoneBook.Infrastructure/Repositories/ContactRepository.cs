@@ -44,15 +44,13 @@ namespace PhoneBook.Infrastructure.Repositories
             return await query.AnyAsync();
         }
 
-        public async Task<IEnumerable<Contact>> SearchAsync(string? name, string? phone, DateTime? birthFrom, DateTime? birthTo)
+        public async Task<IEnumerable<Contact>> SearchAsync(string? SearchTerm, DateTime? birthFrom, DateTime? birthTo)
         {
             var query = _context.Contacts.Include(c => c.ContactImage).AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(name))
-                query = query.Where(c => c.FullName.Contains(name));
+            if (!string.IsNullOrWhiteSpace(SearchTerm))
+                query = query.Where(c => c.FullName.Contains(SearchTerm)|| c.MobileNumber.Contains(SearchTerm));
 
-            if (!string.IsNullOrWhiteSpace(phone))
-                query = query.Where(c => c.MobileNumber.Contains(phone));
 
             if (birthFrom.HasValue)
                 query = query.Where(c => c.BirthDate >= birthFrom.Value);
@@ -72,7 +70,6 @@ namespace PhoneBook.Infrastructure.Repositories
 
         public async Task UpdateAsync(Contact contact)
         {
-            // _context.Entry(contact).State = EntityState.Modified;
             _context.Contacts.Update(contact);
             await _context.SaveChangesAsync();
         }

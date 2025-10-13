@@ -100,7 +100,6 @@ namespace PhoneBook.Application.Services
 
                 var contacts = await _unitOfWork.Contacts.SearchAsync(
                     searchDto.SearchTerm,
-                    searchDto.FullName,
                     birthDateFrom,
                     birthDateTo);
 
@@ -181,8 +180,7 @@ namespace PhoneBook.Application.Services
                 {
                     throw new BusinessException("این شماره موبایل قبلاً ثبت شده است");
                 }
-                
-                // 3. Update fields - بدون if!
+                // 3. Update fields
                 _logger.LogInformation("به‌روزرسانی فیلدها: Name={Name}, Mobile={Mobile}", 
                     dto.FullName, dto.MobileNumber);
                 

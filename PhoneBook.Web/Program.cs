@@ -10,6 +10,11 @@ using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var cultureInfo = new CultureInfo("en-US");
+cultureInfo.DateTimeFormat.Calendar = new GregorianCalendar();
+
+CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 // ============================================================
 // 1. Configure Services
 // ============================================================
@@ -160,13 +165,31 @@ if (app.Environment.IsDevelopment())
 // ============================================================
 // Configure Culture (Persian Support)
 // ============================================================
-var supportedCultures = new[] { new CultureInfo("fa-IR") };
-app.UseRequestLocalization(new RequestLocalizationOptions
+// var supportedCultures = new[] { new CultureInfo("fa-IR") };
+// app.UseRequestLocalization(new RequestLocalizationOptions
+// {
+//     DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("fa-IR"),
+//     SupportedCultures = supportedCultures,
+//     SupportedUICultures = supportedCultures
+// });
+// // ==================== تنظیم Culture به میلادی ====================
+var supportedCultures = new[] { new CultureInfo("en-US") };
+var localizationOptions = new RequestLocalizationOptions
 {
-    DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("fa-IR"),
+    DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("en-US"),
     SupportedCultures = supportedCultures,
     SupportedUICultures = supportedCultures
-});
+};
+
+// تنظیم پیش‌فرض Thread
+CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
+
+// اجبار استفاده از تقویم میلادی
+// var cultureInfo = new CultureInfo("en-US");
+cultureInfo.DateTimeFormat.Calendar = new GregorianCalendar();
+Thread.CurrentThread.CurrentCulture = cultureInfo;
+Thread.CurrentThread.CurrentUICulture = cultureInfo;
 
 // ============================================================
 // Run Application

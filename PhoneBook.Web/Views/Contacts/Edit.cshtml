@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "ویرایش مخاطب";
     var hasImage = ViewBag.HasImage as bool? ?? false;
+    var persianDate = ViewBag.PersianBirthDate as string;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -13,7 +14,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form asp-action="Edit" method="post" enctype="multipart/form-data">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data" id="editForm">
             @Html.AntiForgeryToken()
             <input asp-for="Id" type="hidden" />
             
@@ -33,9 +34,12 @@
             </div>
 
             <div class="mb-3">
-                <label asp-for="BirthDate" class="form-label">تاریخ تولد (میلادی)</label>
-                <input asp-for="BirthDate" type="date" class="form-control" />
+                <label class="form-label">تاریخ تولد (شمسی)</label>
+                <input type="text" id="persianBirthDate" class="form-control" 
+                       placeholder="مثال: 1370/05/15" autocomplete="off" readonly />
+                <input asp-for="BirthDate" type="hidden" id="gregorianBirthDate" />
                 <span asp-validation-for="BirthDate" class="text-danger"></span>
+                <small class="form-text text-muted">اختیاری - با کلیک تاریخ را از تقویم انتخاب کنید</small>
             </div>
 
             @if (hasImage)
@@ -44,10 +48,10 @@
                     <label class="form-label">تصویر فعلی</label>
                     <div>
                         <img src="@Url.Action("GetImage", new { id = Model.Id })" 
-                             class="contact-image-large mb-2" alt="تصویر فعلی" />
+                             class="img-thumbnail mb-2" style="max-width: 200px;" alt="تصویر فعلی" />
                     </div>
                     <div class="form-check">
-                        <input asp-for="RemoveImage" class="form-check-input" type="checkbox" />
+                        <input asp-for="RemoveImage" class="form-check-input" type="checkbox" id="removeImageCheckbox" />
                         <label asp-for="RemoveImage" class="form-check-label">
                             حذف تصویر
                         </label>
@@ -59,9 +63,14 @@
                 <label asp-for="Image" class="form-label">
                     @(hasImage ? "تصویر جدید" : "تصویر")
                 </label>
-                <input asp-for="Image" type="file" class="form-control" accept="image/*" />
+                <input asp-for="Image" type="file" class="form-control" accept="image/*" 
+                       id="imageInput" />
                 <span asp-validation-for="Image" class="text-danger"></span>
                 <small class="form-text text-muted">فرمت‌های مجاز: JPG, PNG, GIF (حداکثر 5MB)</small>
+                
+                <div id="imagePreview" class="mt-2" style="display:none;">
+                    <img id="preview" src="" alt="پیش‌نمایش" class="img-thumbnail" style="max-width: 200px;" />
+                </div>
             </div>
 
             <div class="mt-4">
@@ -78,4 +87,112 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        $(document).ready(function () {
+            
+            var initialDate = '@Model.BirthDate?.ToString("yyyy-MM-dd")';
+            var persianDate = '@persianDate';
+            
+            console.log('Initial Date (Gregorian):', initialDate);
+            console.log('Persian Date:', persianDate);
+
+            var picker = $('#persianBirthDate').pDatepicker({
+                initialValue: false,
+                format: 'YYYY/MM/DD',
+                autoClose: true,
+                observer: true,
+                calendar: {
+                    persian: {
+                        locale: 'fa'
+                    }
+                },
+                maxDate: new Date(),
+                onSelect: function (unix) {
+                    
+                    var date = new Date(unix);
+                    date.setUTCHours(0, 0, 0, 0);
+                    
+                    var year = date.getUTCFullYear();
+                    var month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                    var day = String(date.getUTCDate()).padStart(2, '0');
+                    
+                    var gregorian = year + '-' + month + '-' + day;
+                    
+                    
+                    $('#gregorianBirthDate').val(gregorian);
+                }
+            });
+
+            if (persianDate) {
+                $('#persianBirthDate').val(persianDate);
+            }
+            
+            if (initialDate && initialDate !== '') {
+                $('#gregorianBirthDate').val(initialDate);
+            }
+
+            $('#imageInput').on('change', function () {
+                
+                var input = this;
+                if (input.files && input.files[0]) {
+                    var file = input.files[0];
+                    var fileSize = file.size / 1024 / 1024; // MB
+                    
+                    if (fileSize > 5) {
+                        alert('حجم فایل نباید بیشتر از 5 مگابایت باشد');
+                        $(this).val('');
+                        $('#imagePreview').hide();
+                        return;
+                    }
+                    
+                    var allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                    if (!allowedTypes.includes(file.type)) {
+                        alert('فرمت فایل باید JPG, PNG یا GIF باشد');
+                        $(this).val('');
+                        $('#imagePreview').hide();
+                        return;
+                    }
+                    
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#preview').attr('src', e.target.result);
+                        $('#imagePreview').show();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+
+            // Validation before submit
+            $('#editForm').on('submit', function(e) {
+                
+                var fullName = $('#FullName').val().trim();
+                var mobileNumber = $('#MobileNumber').val().trim();
+                var persianDate = $('#persianBirthDate').val();
+                var gregorianDate = $('#gregorianBirthDate').val();
+                
+                
+                if (!fullName) {
+                    alert('لطفاً نام را وارد کنید');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                if (!mobileNumber) {
+                    alert('لطفاً شماره موبایل را وارد کنید');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                if (persianDate && !gregorianDate) {
+                    alert('لطفاً تاریخ را مجدداً از تقویم انتخاب کنید');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                return true;
+            });
+        });
+    </script>
 }

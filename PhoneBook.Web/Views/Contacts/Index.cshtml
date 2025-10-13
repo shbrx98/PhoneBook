@@ -1,7 +1,6 @@
 @model PhoneBook.Web.Models.ViewModels.ContactListViewModel
 @{
     ViewData["Title"] = "لیست مخاطبین";
-    var searchDto = ViewBag.SearchDto as PhoneBook.Application.DTOs.SearchContactDto;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -17,17 +16,19 @@
             <div class="col-md-4">
                 <label class="form-label">جستجو در نام و شماره</label>
                 <input type="text" class="form-control" name="SearchTerm" 
-                       value="@searchDto?.SearchTerm" placeholder="نام یا شماره موبایل..." />
+                       value="@Model.SearchDto.SearchTerm" placeholder="نام یا شماره موبایل..." />
             </div>
             <div class="col-md-3">
-                <label class="form-label">تاریخ تولد از</label>
-                <input type="text" class="form-control" name="BirthDateFrom" 
-                       value="@searchDto?.BirthDateFrom" placeholder="1380/01/01" />
+                <label class="form-label">تاریخ تولد از (شمسی)</label>
+                <input type="text" class="form-control persian-datepicker" id="searchDateFrom"
+                       value="@Model.SearchDto.BirthDateFrom" placeholder="1370/01/01" readonly />
+                <input type="hidden" name="BirthDateFrom" id="searchDateFromHidden" value="@Model.SearchDto.BirthDateFrom" />
             </div>
             <div class="col-md-3">
-                <label class="form-label">تاریخ تولد تا</label>
-                <input type="text" class="form-control" name="BirthDateTo" 
-                       value="@searchDto?.BirthDateTo" placeholder="1400/12/29" />
+                <label class="form-label">تاریخ تولد تا (شمسی)</label>
+                <input type="text" class="form-control persian-datepicker" id="searchDateTo"
+                       value="@Model.SearchDto.BirthDateTo" placeholder="1400/12/29" readonly />
+                <input type="hidden" name="BirthDateTo" id="searchDateToHidden" value="@Model.SearchDto.BirthDateTo" />
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
@@ -35,9 +36,7 @@
                 </button>
             </div>
         </div>
-        @if (!string.IsNullOrEmpty(searchDto?.SearchTerm) || 
-             !string.IsNullOrEmpty(searchDto?.BirthDateFrom) || 
-             !string.IsNullOrEmpty(searchDto?.BirthDateTo))
+        @if (Model.HasSearch)
         {
             <div class="mt-2">
                 <a asp-action="Index" class="btn btn-sm btn-secondary">
@@ -48,7 +47,7 @@
     </form>
 </div>
 
-@if (Model != null && Model.Contacts != null && Model.Contacts.Any())
+@if (Model.Contacts.Any())
 {
     <div class="card">
         <div class="card-body">
@@ -85,15 +84,15 @@
                                 <td>@(contact.BirthDatePersian ?? "-")</td>
                                 <td>
                                     <a asp-action="Details" asp-route-id="@contact.Id" 
-                                       class="btn btn-sm btn-info btn-action">
+                                       class="btn btn-sm btn-info btn-action" title="مشاهده">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     <a asp-action="Edit" asp-route-id="@contact.Id" 
-                                       class="btn btn-sm btn-warning btn-action">
+                                       class="btn btn-sm btn-warning btn-action" title="ویرایش">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <button type="button" class="btn btn-sm btn-danger btn-action" 
-                                            onclick="confirmDelete(@contact.Id, '@contact.FullName')">
+                                            onclick="confirmDelete(@contact.Id, '@contact.FullName')" title="حذف">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -119,6 +118,38 @@ else
 
 @section Scripts {
     <script>
+        $(document).ready(function () {
+            $('#searchDateFrom').pDatepicker({
+                initialValue: false,
+                format: 'YYYY/MM/DD',
+                autoClose: true,
+                calendar: {
+                    persian: {
+                        locale: 'fa'
+                    }
+                },
+                onSelect: function (unix) {
+                    var persianDate = $('#searchDateFrom').val();
+                    $('#searchDateFromHidden').val(persianDate);
+                }
+            });
+
+            $('#searchDateTo').pDatepicker({
+                initialValue: false,
+                format: 'YYYY/MM/DD',
+                autoClose: true,
+                calendar: {
+                    persian: {
+                        locale: 'fa'
+                    }
+                },
+                onSelect: function (unix) {
+                    var persianDate = $('#searchDateTo').val();
+                    $('#searchDateToHidden').val(persianDate);
+                }
+            });
+        });
+
         function confirmDelete(id, name) {
             if (confirm('آیا از حذف "' + name + '" اطمینان دارید؟')) {
                 var form = document.getElementById('deleteForm');

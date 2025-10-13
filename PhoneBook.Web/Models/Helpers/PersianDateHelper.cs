@@ -1,80 +1,107 @@
-using MD.PersianDateTime;
-
-namespace PhoneBook.Web.Models.Helpers
+using System.Globalization;
+namespace PhoneBook.Web.Helpers
 {
     public static class PersianDateHelper
     {
-        public static DateTime? ParsePersianDate(string? persianDate)
+        private static readonly PersianCalendar _persianCalendar = new PersianCalendar();
+
+        /// <summary>
+        /// CONVERT TO PERSIAN DATE (FORMAT: 1402/05/15)
+        /// </summary>
+        public static string ToPersianDate(this DateTime date)
         {
-            if (string.IsNullOrWhiteSpace(persianDate))
-                return null;
+            int year = _persianCalendar.GetYear(date);
+            int month = _persianCalendar.GetMonth(date);
+            int day = _persianCalendar.GetDayOfMonth(date);
 
-            try
-            {
-                // Remove extra spaces
-                persianDate = persianDate.Trim().Replace("  ", " ");
-
-                // Convert Persian digits to English digits
-                persianDate = ConvertPersianNumbersToEnglish(persianDate);
-
-               // Parse the Persian date
-                var pd = PersianDateTime.Parse(persianDate);
-                return pd.ToDateTime();
-            }
-            catch
-            {
-                return null;
-            }
+            return $"{year:0000}/{month:00}/{day:00}";
         }
 
-        public static string ToPersianDate(DateTime? dateTime)
+        /// <summary>
+        /// Convert to Persian date (format: 1402/05/15)
+        /// </summary>
+        public static string ToPersianDateLong(this DateTime date)
         {
-            if (!dateTime.HasValue)
-                return string.Empty;
+            int year = _persianCalendar.GetYear(date);
+            int month = _persianCalendar.GetMonth(date);
+            int day = _persianCalendar.GetDayOfMonth(date);
 
-            try
-            {
-                var pd = new PersianDateTime(dateTime.Value);
-                return pd.ToString("yyyy/MM/dd");
-            }
-            catch
-            {
-                return string.Empty;
-            }
+            string monthName = GetPersianMonthName(month);
+            string dayName = GetPersianDayOfWeek(date.DayOfWeek);
+
+            return $"{dayName} {day} {monthName} {year}";
         }
 
-        public static string ToPersianDateTime(DateTime? dateTime)
+        /// <summary>
+        /// Name of the Persian month
+        /// </summary>
+        private static string GetPersianMonthName(int month)
         {
-            if (!dateTime.HasValue)
-                return string.Empty;
-
-            try
+            return month switch
             {
-                var pd = new PersianDateTime(dateTime.Value);
-                return pd.ToString("yyyy/MM/dd HH:mm");
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        private static string ConvertPersianNumbersToEnglish(string input)
-        {
-            var persianDigits = new Dictionary<char, char>
-            {
-                {'۰', '0'}, {'۱', '1'}, {'۲', '2'}, {'۳', '3'}, {'۴', '4'},
-                {'۵', '5'}, {'۶', '6'}, {'۷', '7'}, {'۸', '8'}, {'۹', '9'}
+                1 => "فروردین",
+                2 => "اردیبهشت",
+                3 => "خرداد",
+                4 => "تیر",
+                5 => "مرداد",
+                6 => "شهریور",
+                7 => "مهر",
+                8 => "آبان",
+                9 => "آذر",
+                10 => "دی",
+                11 => "بهمن",
+                12 => "اسفند",
+                _ => ""
             };
-
-            return string.Join("", input.Select(c =>
-                persianDigits.ContainsKey(c) ? persianDigits[c] : c
-            ));
         }
 
-        public static (DateTime? from, DateTime? to) ParsePersianDateRange(string? fromDate, string? toDate)
+        /// <summary>
+        /// Name of the Persian day of the week
+        /// </summary>
+        private static string GetPersianDayOfWeek(DayOfWeek day)
         {
-            return (ParsePersianDate(fromDate), ParsePersianDate(toDate));
+            return day switch
+            {
+                DayOfWeek.Saturday => "شنبه",
+                DayOfWeek.Sunday => "یکشنبه",
+                DayOfWeek.Monday => "دوشنبه",
+                DayOfWeek.Tuesday => "سه‌شنبه",
+                DayOfWeek.Wednesday => "چهارشنبه",
+                DayOfWeek.Thursday => "پنج‌شنبه",
+                DayOfWeek.Friday => "جمعه",
+                _ => ""
+            };
+        }
+
+        /// <summary>
+        /// Convert Persian date (format: 1402/05/15) to Gregorian date
+        /// </summary>
+        public static DateTime? ToGregorianDate(string persianDate)
+        {
+            try
+            {
+                var parts = persianDate.Split('/');
+                if (parts.Length != 3)
+                    return null;
+
+                int year = int.Parse(parts[0]);
+                int month = int.Parse(parts[1]);
+                int day = int.Parse(parts[2]);
+
+                return _persianCalendar.ToDateTime(year, month, day, 0, 0, 0, 0);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Validate Persian date (format: 1402/05/15)
+        /// </summary>
+        public static bool IsValidPersianDate(string persianDate)
+        {
+            return ToGregorianDate(persianDate).HasValue;
         }
     }
 }

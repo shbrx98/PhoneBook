@@ -4,6 +4,7 @@ using PhoneBook.Application.Services;
 using PhoneBook.Web.Models.ViewModels;
 using PhoneBook.Web.Models.Constants;
 using PhoneBook.Web.Models.Helpers;
+using System.Globalization;
 using FluentValidation;
 
 namespace PhoneBook.Web.Controllers
@@ -35,7 +36,7 @@ namespace PhoneBook.Web.Controllers
                 IEnumerable<ContactDto> contacts;
                 bool hasSearch = false;
 
-                // ⭐ تصحیح: SearchTerm به جای FullName
+                
                 if (!string.IsNullOrWhiteSpace(searchDto.SearchTerm) ||
                     !string.IsNullOrWhiteSpace(searchDto.BirthDateFrom) ||
                     !string.IsNullOrWhiteSpace(searchDto.BirthDateTo))
@@ -101,6 +102,7 @@ namespace PhoneBook.Web.Controllers
             return View(new CreateContactDto());
         }
 
+
         // POST: Contacts/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -108,69 +110,136 @@ namespace PhoneBook.Web.Controllers
         {
             try
             {
-                // Debug: چاپ داده‌های دریافتی
-                _logger.LogInformation("Creating contact: Name={Name}, Mobile={Mobile}", 
+                
+                var culture = new CultureInfo("en-US");
+                culture.DateTimeFormat.Calendar = new GregorianCalendar();
+                Thread.CurrentThread.CurrentCulture = culture;
+                Thread.CurrentThread.CurrentUICulture = culture;
+
+                _logger.LogInformation("Creating contact: Name={Name}, Mobile={Mobile}",
                     dto.FullName, dto.MobileNumber);
+
+
+                
+                if (dto.BirthDate.HasValue)
+                {
+                    var today = DateTime.UtcNow.Date;
+                    
+                }
 
                 // Validation
                 var validationResult = await _createValidator.ValidateAsync(dto);
                 if (!validationResult.IsValid)
                 {
+                    
                     foreach (var error in validationResult.Errors)
                     {
                         ModelState.AddModelError(error.PropertyName, error.ErrorMessage);
                         _logger.LogWarning("Validation error: {Field} = {Message}", 
                             error.PropertyName, error.ErrorMessage);
+                        
                     }
+                    
+                    if (dto.BirthDate.HasValue)
+                    {
+                        try
+                        {
+                            var persianCalendar = new PersianCalendar();
+                            var year = persianCalendar.GetYear(dto.BirthDate.Value);
+                            var month = persianCalendar.GetMonth(dto.BirthDate.Value);
+                            var day = persianCalendar.GetDayOfMonth(dto.BirthDate.Value);
+                            ViewBag.PersianBirthDate = $"{year}/{month:00}/{day:00}";
+                        }
+                        catch { }
+                    }
+                    
                     return View(dto);
                 }
 
                 // Create contact
                 await _contactService.CreateContactAsync(dto);
+                
                 TempData["Success"] = "مخاطب با موفقیت ایجاد شد";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "خطا در ایجاد مخاطب جدید");
-                ModelState.AddModelError("", ex.Message);
+                ModelState.AddModelError("", "خطا در ایجاد مخاطب: " + ex.Message);
                 return View(dto);
             }
         }
-       
+
+        
         // GET: Contacts/Edit/5
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
             try
             {
+                
                 var contact = await _contactService.GetContactByIdAsync(id);
+                
                 if (contact == null)
                 {
                     TempData["Error"] = "مخاطب یافت نشد";
                     return RedirectToAction(nameof(Index));
                 }
 
-            var hasImage = contact.HasImage;
-            
-            var viewModel = new ContactFormViewModel
-            {
-                UpdateDto = new UpdateContactDto
-                {
-                    Id = contact.Id,
-                    FullName = contact.FullName,
-                    MobileNumber = contact.MobileNumber,
-                    BirthDate = contact.BirthDate
-                }
-            };
+                var hasImage = contact.HasImage;
 
-            ViewBag.HasImage = hasImage;
+                        var viewModel = new ContactFormViewModel
+
+                        {
+                            UpdateDto = new UpdateContactDto
+                            {
+                                Id = contact.Id,
+                                FullName = contact.FullName,
+                                MobileNumber = contact.MobileNumber,
+                                BirthDate = contact.BirthDate
+                            }
+                        };
+                
+                ViewBag.HasImage = contact.HasImage;
+
+               
+                if (contact.BirthDate.HasValue)
+                {
+                    try
+                    {
+                        
+                        var culture = new CultureInfo("en-US");
+                        culture.DateTimeFormat.Calendar = new GregorianCalendar();
+                        Thread.CurrentThread.CurrentCulture = culture;
+
+                        var persianCalendar = new PersianCalendar();
+                        var birthDate = contact.BirthDate.Value;
+                        
+                        var year = persianCalendar.GetYear(birthDate);
+                        var month = persianCalendar.GetMonth(birthDate);
+                        var day = persianCalendar.GetDayOfMonth(birthDate);
+                        
+                        ViewBag.PersianBirthDate = $"{year}/{month:00}/{day:00}";
+                        
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error converting data {id} to Persian calendar", id);
+                        ViewBag.PersianBirthDate = null;
+                    }
+                }
+                else
+                {
+                    ViewBag.PersianBirthDate = null;
+                }
+
                 return View(viewModel.UpdateDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "خطا در نمایش فرم ویرایش");
-                TempData["Error"] = "خطا در دریافت اطلاعات";
+                
+                _logger.LogError(ex, "Error displaying the edit form for contact {Id}", id);
+                TempData["Error"] = "خطا در دریافت اطلاعات: " + ex.Message;
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -262,7 +331,7 @@ namespace PhoneBook.Web.Controllers
                 var image = await _contactService.GetContactImageAsync(id);
                 if (image == null)
                 {
-                    // بازگشت یک تصویر پیش‌فرض
+                    
                     return NotFound();
                 }
 
