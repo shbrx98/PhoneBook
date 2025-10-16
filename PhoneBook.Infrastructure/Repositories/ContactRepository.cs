@@ -48,12 +48,11 @@ namespace PhoneBook.Infrastructure.Repositories
         {
             var query = _context.Contacts.Include(c => c.ContactImage).AsQueryable();
 
-if (!string.IsNullOrWhiteSpace(FullName))
-    query = query.Where(c => EF.Functions.Like(c.FullName, $"%{FullName}%"));
+            if (!string.IsNullOrWhiteSpace(FullName))
+                query = query.Where(c => c.FullName.Contains(FullName));
 
-if (!string.IsNullOrWhiteSpace(phoneNumber))
-    query = query.Where(c => EF.Functions.Like(c.MobileNumber, $"%{phoneNumber}%"));
-
+            if (!string.IsNullOrWhiteSpace(phoneNumber))
+                query = query.Where(c => c.MobileNumber.Contains(phoneNumber));
 
 
 
