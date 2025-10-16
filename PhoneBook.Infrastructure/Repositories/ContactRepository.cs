@@ -44,12 +44,17 @@ namespace PhoneBook.Infrastructure.Repositories
             return await query.AnyAsync();
         }
 
-        public async Task<IEnumerable<Contact>> SearchAsync(string? SearchTerm, DateTime? birthFrom, DateTime? birthTo)
+        public async Task<IEnumerable<Contact>> SearchAsync(string? FullName, string? phoneNumber, DateTime? birthFrom, DateTime? birthTo)
         {
             var query = _context.Contacts.Include(c => c.ContactImage).AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(SearchTerm))
-                query = query.Where(c => c.FullName.Contains(SearchTerm)|| c.MobileNumber.Contains(SearchTerm));
+if (!string.IsNullOrWhiteSpace(FullName))
+    query = query.Where(c => EF.Functions.Like(c.FullName, $"%{FullName}%"));
+
+if (!string.IsNullOrWhiteSpace(phoneNumber))
+    query = query.Where(c => EF.Functions.Like(c.MobileNumber, $"%{phoneNumber}%"));
+
+
 
 
             if (birthFrom.HasValue)

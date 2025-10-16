@@ -37,7 +37,6 @@ namespace PhoneBook.Application.DTOs
     {
         public string? FullName { get; set; }
         public string? MobileNumber { get; set; }
-        public string? SearchTerm { get; set; }
         
         public string? BirthDateFrom { get; set; }
         public string? BirthDateTo { get; set; }

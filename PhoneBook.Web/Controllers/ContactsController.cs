@@ -37,7 +37,8 @@ namespace PhoneBook.Web.Controllers
                 bool hasSearch = false;
 
                 
-                if (!string.IsNullOrWhiteSpace(searchDto.SearchTerm) ||
+                if (!string.IsNullOrWhiteSpace(searchDto.FullName) ||
+                    !string.IsNullOrWhiteSpace(searchDto.MobileNumber) ||
                     !string.IsNullOrWhiteSpace(searchDto.BirthDateFrom) ||
                     !string.IsNullOrWhiteSpace(searchDto.BirthDateTo))
                 {

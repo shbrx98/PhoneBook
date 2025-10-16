@@ -13,18 +13,25 @@
 <div class="search-box">
     <form asp-action="Index" method="get">
         <div class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">جستجو در نام و شماره</label>
-                <input type="text" class="form-control" name="SearchTerm" 
-                       value="@Model.SearchDto.SearchTerm" placeholder="نام یا شماره موبایل..." />
+            <div class="col-md-2">
+                <label class="form-label">جستجو نام</label>
+                <input type="text" class="form-control" name="FullName" 
+                    value="@Model.SearchDto.FullName" placeholder="نام ..." />
             </div>
-            <div class="col-md-3">
+
+            <div class="col-md-2">
+                <label class="form-label">جستجو موبایل</label>
+                <input type="text" class="form-control" name="MobileNumber" 
+                    value="@Model.SearchDto.MobileNumber" placeholder="شماره موبایل ..." />
+            </div>
+
+            <div class="col-md-2">
                 <label class="form-label">تاریخ تولد از (شمسی)</label>
                 <input type="text" class="form-control persian-datepicker" id="searchDateFrom"
                        value="@Model.SearchDto.BirthDateFrom" placeholder="1370/01/01" readonly />
                 <input type="hidden" name="BirthDateFrom" id="searchDateFromHidden" value="@Model.SearchDto.BirthDateFrom" />
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">تاریخ تولد تا (شمسی)</label>
                 <input type="text" class="form-control persian-datepicker" id="searchDateTo"
                        value="@Model.SearchDto.BirthDateTo" placeholder="1400/12/29" readonly />

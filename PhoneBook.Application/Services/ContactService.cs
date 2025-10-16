@@ -99,7 +99,8 @@ namespace PhoneBook.Application.Services
                 }
 
                 var contacts = await _unitOfWork.Contacts.SearchAsync(
-                    searchDto.SearchTerm,
+                    searchDto.FullName,
+                    searchDto.MobileNumber,
                     birthDateFrom,
                     birthDateTo);
 
